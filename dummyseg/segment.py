@@ -45,8 +45,8 @@ def main():
     # create seg
     seg = (img_data > 0).astype(np.uint8) + (img_data >= 0.5).astype(np.uint8)
 
-    seg = nib.Nifti1Image(seg, affine) # type: ignore
-    nib.save(seg, tgt_path) # type: ignore
+    seg = nib.Nifti1Image(seg, affine)  # type: ignore
+    nib.save(seg, tgt_path)  # type: ignore
     print(f'dummyseg: saved seg to {tgt_path}')
 
     net = torch.nn.Linear(8, 8)  # make sure pytorch works
