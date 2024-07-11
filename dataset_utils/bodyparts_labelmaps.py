@@ -1,0 +1,256 @@
+map_taskid_to_partname = {
+    251: 'class_map_part_organs',
+    252: 'class_map_part_vertebrae',
+    253: 'class_map_part_cardiac',
+    254: 'class_map_part_muscles',
+    255: 'class_map_part_ribs',
+    256: 'class_map_part_oarrad',
+    257: 'class_map_part_head',
+    258: 'class_map_part_headneck',
+    259: 'class_map_part_bodyregions',
+}
+
+map_taskid_to_expname = {
+    251: 'organs',
+    252: 'vertebrae',
+    253: 'cardiac',
+    254: 'muscles',
+    255: 'ribs',
+    256: 'OAR-rad',
+    257: 'head',
+    258: 'headneck',
+    259: 'body-regions',
+}
+
+# Labelmap of each sub-model
+# 251
+labelmap_part_organs = {
+    0: 'background',
+    1: 'spleen',
+    2: 'kidney_right',
+    3: 'kidney_left',
+    4: 'gallbladder',
+    5: 'liver',
+    6: 'stomach',
+    7: 'aorta',
+    8: 'inferior_vena_cava',
+    9: 'portal_vein_and_splenic_vein',
+    10: 'pancreas',
+    11: 'adrenal_gland_right',
+    12: 'adrenal_gland_left',
+    13: 'lung_upper_lobe_left',
+    14: 'lung_lower_lobe_left',
+    15: 'lung_upper_lobe_right',
+    16: 'lung_middle_lobe_right',
+    17: 'lung_lower_lobe_right'
+}
+
+# 252
+labelmap_part_vertebrae = {
+    0: 'background',
+    1: 'vertebrae_L5',
+    2: 'vertebrae_L4',
+    3: 'vertebrae_L3',
+    4: 'vertebrae_L2',
+    5: 'vertebrae_L1',
+    6: 'vertebrae_T12',
+    7: 'vertebrae_T11',
+    8: 'vertebrae_T10',
+    9: 'vertebrae_T9',
+    10: 'vertebrae_T8',
+    11: 'vertebrae_T7',
+    12: 'vertebrae_T6',
+    13: 'vertebrae_T5',
+    14: 'vertebrae_T4',
+    15: 'vertebrae_T3',
+    16: 'vertebrae_T2',
+    17: 'vertebrae_T1',
+    18: 'vertebrae_C7',
+    19: 'vertebrae_C6',
+    20: 'vertebrae_C5',
+    21: 'vertebrae_C4',
+    22: 'vertebrae_C3',
+    23: 'vertebrae_C2',
+    24: 'vertebrae_C1'
+}
+
+# 253
+labelmap_part_cardiac = {
+    0: 'background',
+    1: 'esophagus',
+    2: 'trachea',
+    3: 'heart_myocardium',
+    4: 'heart_atrium_left',
+    5: 'heart_ventricle_left',
+    6: 'heart_atrium_right',
+    7: 'heart_ventricle_right',
+    8: 'pulmonary_artery',
+    9: 'brain',
+    10: 'iliac_artery_left',
+    11: 'iliac_artery_right',
+    12: 'iliac_vena_left',
+    13: 'iliac_vena_right',
+    14: 'small_bowel',
+    15: 'duodenum',
+    16: 'colon',
+    17: 'urinary_bladder',
+    18: 'face'
+}
+
+# 254
+labelmap_part_muscles = {
+    0: 'background',
+    1: 'humerus_left',
+    2: 'humerus_right',
+    3: 'scapula_left',
+    4: 'scapula_right',
+    5: 'clavicula_left',
+    6: 'clavicula_right',
+    7: 'femur_left',
+    8: 'femur_right',
+    9: 'hip_left',
+    10: 'hip_right',
+    11: 'sacrum',
+    12: 'gluteus_maximus_left',
+    13: 'gluteus_maximus_right',
+    14: 'gluteus_medius_left',
+    15: 'gluteus_medius_right',
+    16: 'gluteus_minimus_left',
+    17: 'gluteus_minimus_right',
+    18: 'autochthon_left',
+    19: 'autochthon_right',
+    20: 'iliopsoas_left',
+    21: 'iliopsoas_right'
+}
+
+# 255
+labelmap_part_ribs = {
+    0: 'background',
+    1: 'rib_left_1',
+    2: 'rib_left_2',
+    3: 'rib_left_3',
+    4: 'rib_left_4',
+    5: 'rib_left_5',
+    6: 'rib_left_6',
+    7: 'rib_left_7',
+    8: 'rib_left_8',
+    9: 'rib_left_9',
+    10: 'rib_left_10',
+    11: 'rib_left_11',
+    12: 'rib_left_12',
+    13: 'rib_right_1',
+    14: 'rib_right_2',
+    15: 'rib_right_3',
+    16: 'rib_right_4',
+    17: 'rib_right_5',
+    18: 'rib_right_6',
+    19: 'rib_right_7',
+    20: 'rib_right_8',
+    21: 'rib_right_9',
+    22: 'rib_right_10',
+    23: 'rib_right_11',
+    24: 'rib_right_12'
+}
+
+# 256: 21 classes organs at risk in house and visceral
+labelmap_part_oarrad = {
+    0: 'background',
+    1: 'brainstem',
+    2: 'spinal_canal',
+    3: 'left_parotid_gland',
+    4: 'right_parotid_gland',
+    5: 'left_submandibular gland',
+    6: 'right_submandibular_gland',
+    7: 'larynx',
+    8: 'heart',
+    9: 'esophagus',
+    10: 'stomach',
+    11: 'bowel_bag',
+    12: 'sigmoid',
+    13: 'rectum',
+    14: 'prostate',
+    15: 'seminal_vesicle',
+    16: 'left_mammary_gland',
+    17: 'right_mammary_gland',
+    18: 'sternum',
+    19: 'right psoas major',
+    20: 'left psoas major',
+    21: 'right rectus abdominis',
+    22: 'left rectus abdominis',
+}
+
+# 257: 10 classes head koens registration
+labelmap_part_head = {
+    0: 'background',
+    1: 'white matter',
+    2: 'gray matter',
+    3: 'csf',
+    4: 'head bone',
+    5: 'scalp',
+    6: 'eye balls',
+    7: 'compact bone',
+    8: 'spongy bone',
+    9: 'blood',
+    10: 'head muscles', }
+
+# 258: 30 lasses Head and neck structures from HanSeg
+labelmap_part_headneck = {
+    0: 'background',
+    1: 'OAR_A_Carotid_L',
+    2: 'OAR_A_Carotid_R',
+    3: 'OAR_Arytenoid',
+    4: 'OAR_Bone_Mandible',
+    5: 'OAR_Brainstem',
+    6: 'OAR_BuccalMucosa',
+    7: 'OAR_Cavity_Oral',
+    8: 'OAR_Cochlea_L',
+    9: 'OAR_Cochlea_R',
+    10: 'OAR_Cricopharyngeus',
+    11: 'OAR_Esophagus_S',
+    12: 'OAR_Eye_AL',
+    13: 'OAR_Eye_AR',
+    14: 'OAR_Eye_PL',
+    15: 'OAR_Eye_PR',
+    16: 'OAR_Glnd_Lacrimal_L',
+    17: 'OAR_Glnd_Lacrimal_R',
+    18: 'OAR_Glnd_Submand_L',
+    19: 'OAR_Glnd_Submand_R',
+    20: 'OAR_Glnd_Thyroid',
+    21: 'OAR_Glottis',
+    22: 'OAR_Larynx_SG',
+    23: 'OAR_Lips',
+    24: 'OAR_OpticChiasm',
+    25: 'OAR_OpticNrv_L',
+    26: 'OAR_OpticNrv_R',
+    27: 'OAR_Parotid_L',
+    28: 'OAR_Parotid_R',
+    29: 'OAR_Pituitary',
+    30: 'OAR_SpinalCord', }
+
+# 259
+labelmap_part_bodyregions = {
+    0: 'background',
+    1: 'subcutaneous_tissue',
+    2: 'muscle',
+    3: 'abdominal_cavity',
+    4: 'thoracic_cavity',
+    5: 'bones',
+    6: 'glands',
+    7: 'pericardium',
+    8: 'breast_implant',
+    9: 'mediastinum',
+    10: 'brain',
+    11: 'spinal_cord',
+}
+
+map_taskid_to_labelmaps = {
+    251: labelmap_part_organs,
+    252: labelmap_part_vertebrae,
+    253: labelmap_part_cardiac,
+    254: labelmap_part_muscles,
+    255: labelmap_part_ribs,
+    256: labelmap_part_oarrad,
+    257: labelmap_part_head,
+    258: labelmap_part_headneck,
+    259: labelmap_part_bodyregions,
+}

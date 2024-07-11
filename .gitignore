@@ -163,3 +163,7 @@ cython_debug/
 
 
 .DS_Store
+
+# Local directories
+set_vars.sh
+.vscode/
