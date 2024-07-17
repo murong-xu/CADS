@@ -1,31 +1,34 @@
-# For aligning the naming conventions across: each dataset -> 9x models
+# replacements only for mapping the naming convention between: each dataset -> 9x models (new)
 replacements = {
-    'gall bladder': 'gallbladder',
-    'urinary bladder': 'urinary_bladder',
-    'right kidney': 'kidney_right',
-    'left kidney': 'kidney_left',
-    # 'brainstem': 'OAR_Brainstem',  # not do it here, we have 2 classes existing
-    'left parotid gland': 'left_parotid_gland',
-    'right parotid gland': 'right_parotid_gland',
-    'right adrenal gland': 'adrenal_gland_right',
-    'left adrenal gland': 'adrenal_gland_left',
-    'portal and splenic_vein': 'portal_vein_and_splenic_vein',
-    'portal vein and splenic vein': 'portal_vein_and_splenic_vein',
-    'postcava': 'inferior_vena_cava',
-    'inferior vena cava': 'inferior_vena_cava',
-    'small bowel': 'small_bowel',
-    'esophagous': 'esophagus',
-    'prostate/uterus': 'prostate',
-    'bladder': 'urinary_bladder', 
+    "gall bladder": "gallbladder",
+    "urinary bladder": "urinary_bladder",
+    "right kidney": "kidney_right",
+    "left kidney": "kidney_left",
+    "brainstem": "OAR_Brainstem",  # remove duplicate in 256
+    "left_parotid_gland": "OAR_Parotid_L",  # remove duplicate in 256
+    "right_parotid_gland": "OAR_Parotid_R",  # remove duplicate in 256
+    "left_submandibular gland": "OAR_Glnd_Submand_L",  # remove duplicate in 256
+    "right_submandibular_gland": "OAR_Glnd_Submand_R",  # remove duplicate in 256
+    'OAR_SpinalCord': 'spinal_cord',  # remove duplicate in 258
+    "right adrenal gland": "adrenal_gland_right",
+    "left adrenal gland": "adrenal_gland_left",
+    "portal and splenic_vein": "portal_vein_and_splenic_vein",
+    "portal vein and splenic vein": "portal_vein_and_splenic_vein",
+    "postcava": "inferior_vena_cava",
+    "inferior vena cava": "inferior_vena_cava",
+    "small bowel": "small_bowel",
+    "esophagous": "esophagus",
+    "prostate/uterus": "prostate",
+    "bladder": "urinary_bladder", 
     # 0037_totalseg labels -> 9 models' predictions
-    'lung upper lobe_left': 'lung_upper_lobe_left',
-    'lung lower lobe left': 'lung_lower_lobe_left',
-    'lung upper lobe right': 'lung_upper_lobe_right',
-    'lung middle lobe right': 'lung_middle_lobe_right',
-    'lung lower lobe right': 'lung_lower_lobe_right',
-    'urinary bladder': 'urinary_bladder',
+    "lung upper lobe_left": "lung_upper_lobe_left",
+    "lung lower lobe left": "lung_lower_lobe_left",
+    "lung upper lobe right": "lung_upper_lobe_right",
+    "lung middle lobe right": "lung_middle_lobe_right",
+    "lung lower lobe right": "lung_lower_lobe_right",
+    "urinary bladder": "urinary_bladder",
     # other new updates
-    'thyroid gland': 'OAR_Glnd_Thyroid', # 0001_visceral_gc
+    "thyroid gland": "OAR_Glnd_Thyroid", # 0001_visceral_gc
     }
 
 
