@@ -62,10 +62,10 @@ class nnUNetv2Predictor():
         self.num_threads_nifti_save = num_threads_nifti_save
         self.device = device
 
-        # Use default settings recommended by nnUNet
+        # Use default settings recommended by nnUNet (also same as TotalSeg_v2)
         self.predictor = nnUNetPredictor(tile_step_size=0.5,
                                          use_gaussian=True,
-                                         use_mirroring=True,
+                                         use_mirroring=False,
                                          perform_everything_on_device=True,
                                          device=self.device,
                                          verbose=verbose,
