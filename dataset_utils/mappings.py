@@ -57,3 +57,6 @@ def map_labels(labelmap1, labelmap2, check_identical=False):
 
     return label_mapping
 
+FULLY_ANNOTATED_DATASETS = ["0001_visceral_gc", "0001_visceral_gc_new", "0002_visceral_sc", "0003_kits21", "0004_lits", "0005_bcv_abdomen",
+                            "0006_bcv_cervix", "0007_chaos", "0008_ctorg", "0009_abdomenct1k", "0014_learn2reg", "0034_empire", "0038_amos", "0039_han_seg", "0039_han_seg_reg"]
+TOL_MISSING_VOLLUME_PERCENTAGE = 0.1

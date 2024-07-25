@@ -24,3 +24,82 @@ def select_imgs(folder, split):
 
     print(f'Number of images: {len(images)}')
     return images
+
+
+def select_labels(folder, datasetname, split):
+    ct_data_dir = os.path.join(folder, datasetname, 'images')
+
+    json_files = glob.glob(ct_data_dir + '/*.json')
+    json_files.sort()
+
+    label_ids = []
+    label = []
+    label_split = []
+    for jsonfile in json_files:
+        file = open(jsonfile)
+        metadata = json.load(file)
+        file.close()
+        if metadata["train"] == split:  # 1 train 0 test 2 validation
+            base = os.path.basename(jsonfile).split('.')[0][:-5]
+            labelfile = os.path.join(
+                folder, datasetname, 'labels', base + '.nii.gz')
+            if os.path.exists(labelfile):
+                label_ids.append(base)
+                label_split.append(metadata["train"])
+                label.append(labelfile)
+    return label, label_ids, label_split
+
+
+def select_files_total_seg(datasetname, split):
+    ctfolder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_ready_1mm'
+    labelsfolder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/gt_data/Totalsegmentor_dataset_combined'
+
+    ct_data_dir = os.path.join(ctfolder, datasetname, 'images')
+
+    json_files = glob.glob(ct_data_dir + '/*.json')
+    json_files.sort()
+
+    folder_ids = []
+    folders = []
+    folder_split = []
+    for jsonfile in json_files:
+        file = open(jsonfile)
+        metadata = json.load(file)
+        file.close()
+        if metadata["train"] == split:  # 1 train 0 test 2 validation
+            base = os.path.basename(jsonfile).split('.')[0][:-5]
+            imagefile = os.path.join(
+                labelsfolder, base, base + '_combined.nii.gz')
+            if os.path.exists(imagefile):
+                folder_ids.append(base)
+                folders.append(os.path.join(labelsfolder, base))
+                folder_split.append(metadata["train"])
+
+    print(f'Number of selected images in split ({split}): {len(folder_ids)}')
+    return folders, folder_ids, folder_split
+
+
+def select_labels_from_gt_data(folder, datasetname, gt_datasetname, split):
+    labelsfolder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/gt_data'
+
+    ct_data_dir = os.path.join(folder, datasetname, 'images')
+
+    json_files = glob.glob(ct_data_dir + '/*.json')
+    json_files.sort()
+
+    label_ids = []
+    label = []
+    label_split = []
+    for jsonfile in json_files:
+        file = open(jsonfile)
+        metadata = json.load(file)
+        file.close()
+        if metadata["train"] == split:  # 1 train 0 test 2 validation
+            base = os.path.basename(jsonfile).split('.')[0][:-5]
+            labelfile = os.path.join(
+                labelsfolder, gt_datasetname, 'labels', base + '.nii.gz')
+            if os.path.exists(labelfile):
+                label_ids.append(base)
+                label_split.append(metadata["train"])
+                label.append(labelfile)
+    return label, label_ids, label_split
