@@ -49,6 +49,9 @@ def main():
 
     parser.add_argument("-out", metavar="output_files_directory", dest="output_folder",
                         help="Output directory for segmentation masks", required=True)
+    
+    parser.add_argument("-split", "--split", type=int,
+                        help="val=2, test=0, train=1", required=True)
 
     parser.add_argument("-model", metavar="models_directory",
                         dest="model_folder", help="Directory of nnUNet models", required=True)
@@ -85,7 +88,7 @@ def main():
 
     folds = 'all'
 
-    test_images = select_imgs(folder=args.input_folder, split=0)
+    test_images = select_imgs(folder=args.input_folder, split=args.split)
 
     predict(test_images, args.output_folder, args.model_folder, args.task_id, folds=folds,
             preprocess_omaseg=args.preprocessing, save_all_combined_seg=args.save_all_combined_seg,
