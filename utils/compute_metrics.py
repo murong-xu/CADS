@@ -12,11 +12,13 @@ from dataset_utils.datasets_labelmap import dataset2labelmap
 from dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
 from dataset_utils.mappings import replace_labelmap, map_labels, replacements, FULLY_ANNOTATED_DATASETS, TOL_MISSING_VOLLUME_PERCENTAGE
 from dataset_utils.postprocessing import Postprocessing, RecalculateAvgOrganVolume
-
-from utils.metrics import compute_max_HD_distance, save_metric, save_missing_structure_check
 from dataset_utils.select_files import select_labels, select_files_total_seg, select_labels_from_gt_data
 
+from utils.metrics import compute_max_HD_distance, save_metric, save_missing_structure_check
+from utils.libs import time_it
 
+
+@time_it
 def compute_metrics_other(input_dir, output_folder, path_avg_organ_volume, split, score_penalize_FP):
     name_split = input_dir.split('/')
     dataset = name_split[-2]
@@ -242,7 +244,7 @@ def compute_metrics_other(input_dir, output_folder, path_avg_organ_volume, split
              "FN_ignore": count_FN_ignore, "FP_ignore": count_FP_ignore}
     save_missing_structure_check(count, output_folder, dataset)
 
-
+@time_it
 def compute_metrics_totalseg(input_dir, output_folder, path_avg_organ_volume, split, score_penalize_FP, parts: Optional[Union[str, List[int]]]):
     name_split = input_dir.split('/')
     dataset = name_split[-2]

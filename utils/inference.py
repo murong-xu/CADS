@@ -1,6 +1,5 @@
 import os
 import sys
-import datetime
 import torch
 import time
 from pathlib import Path
@@ -13,21 +12,7 @@ from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
 
 from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps, except_labels_combine
 from utils.snapshot import generate_snapshot
-
-
-def time_it(func):
-    """
-    Decorator to measure the execution time of a function.
-    """
-    def wrapper(*args, **kwargs):
-        start_time = datetime.datetime.now()
-        result = func(*args, **kwargs)
-        end_time = datetime.datetime.now()
-        duration = end_time - start_time
-        duration_in_s = duration.total_seconds()
-        print(f'{func.__name__} took {duration_in_s:.6f} seconds to run')
-        return result
-    return wrapper
+from utils.libs import time_it
 
 
 def get_task_model_folder(task_id: int, model_folder: str):

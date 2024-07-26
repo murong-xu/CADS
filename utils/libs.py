@@ -3,6 +3,7 @@ import contextlib
 import sys
 import shutil
 import zipfile
+import datetime
 from pathlib import Path
 from urllib.request import urlopen
 
@@ -10,6 +11,22 @@ from urllib.request import urlopen
 Helpers to suppress stdout prints from nnunet
 https://stackoverflow.com/questions/2828953/silence-the-stdout-of-a-function-in-python-without-trashing-sys-stdout-and-resto
 """
+
+def time_it(func):
+    """
+    Decorator to measure the execution time of a function.
+    """
+    def wrapper(*args, **kwargs):
+        start_time = datetime.datetime.now()
+        result = func(*args, **kwargs)
+        end_time = datetime.datetime.now()
+        duration = end_time - start_time
+        duration_in_s = duration.total_seconds()
+        print(f'{func.__name__} took {duration_in_s:.6f} seconds to run')
+        return result
+    return wrapper
+
+
 class DummyFile(object):
     def write(self, x): pass
 
