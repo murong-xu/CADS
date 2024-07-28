@@ -17,6 +17,18 @@ from dataset_utils.select_files import select_labels, select_files_total_seg, se
 from utils.metrics import compute_max_HD_distance, save_metric, save_missing_structure_check
 from utils.libs import time_it
 
+partname_mapping = {
+        551: 251,
+        552: 252,
+        553: 253,
+        554: 254,
+        555: 255,
+        556: 256,
+        557: 257,
+        558: 258,
+        559: 259
+    }
+
 
 @time_it
 def compute_metrics_other(input_dir, output_folder, path_avg_organ_volume, split, score_penalize_FP):
@@ -136,7 +148,7 @@ def compute_metrics_other(input_dir, output_folder, path_avg_organ_volume, split
                     pred_structure = {pseudo_labelmap[pred_structure_label[i]]: pred_structure_count[i] for i in range(
                         len(pred_structure_label))}
                     # 1.1) FN_ignored
-                    if volume <= avg_organ_volume[part][gt_structure]:
+                    if volume <= avg_organ_volume[partname_mapping[part]][gt_structure]:
                         if gt_structure not in count_FN_ignore.keys():
                             count_FN_ignore[gt_structure] = [
                                 {base: [{"GT_vol": volume}, pred_structure]}]
@@ -289,7 +301,7 @@ def compute_metrics_totalseg(input_dir, output_folder, path_avg_organ_volume, sp
             pseudo_labelmap = map_taskid_to_labelmaps[part]
             pseudo_labelmap = replace_labelmap(pseudo_labelmap, replacements)
 
-            gtfile = os.path.join(gtfolder, f'{base}_part_{str(part)}.nii.gz')
+            gtfile = os.path.join(gtfolder, f'{base}_part_{str(partname_mapping[part])}.nii.gz')
             gt = nib.load(gtfile)
             spacing = gt.header.get_zooms()
             gt = gt.get_fdata()
@@ -335,7 +347,7 @@ def compute_metrics_totalseg(input_dir, output_folder, path_avg_organ_volume, sp
                     pred_structure = {pseudo_labelmap[pred_structure_label[i]]: pred_structure_count[i] for i in range(
                         len(pred_structure_label))}
                     # 1.1) FN_ignored
-                    if volume <= avg_organ_volume[part][gt_structure]:
+                    if volume <= avg_organ_volume[partname_mapping[part]][gt_structure]:
                         if gt_structure not in count_FN_ignore.keys():
                             count_FN_ignore[gt_structure] = [
                                 {base: [{"GT_vol": volume}, pred_structure]}]

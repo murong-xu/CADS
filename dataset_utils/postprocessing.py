@@ -25,7 +25,7 @@ def remove_no_label_slides_pred(pred_array, slices_with_all_255):
 class Postprocessing():
     """
     gt: taken from datasets (having GTs)
-    pseudo: prediction maps 251-259
+    pseudo: prediction maps 551-559
     """
 
     def __init__(self, datasetname: str):
@@ -70,7 +70,7 @@ class Postprocessing():
 
     def _process_pesudo(self, part, labelmap, label):
         labelmap_copy = dict(labelmap)
-        if part == 251:
+        if part == 551:
             labelmap_copy, label = self._postprocess(labelmap_copy, label)
         return labelmap_copy, label
 
@@ -112,7 +112,7 @@ class Postprocessing():
         pesudo: merge 2+3->kidney
         """
         pseudo_labelmap_copy = dict(pseudo_labelmap)
-        if part == 251:
+        if part == 551:
             del pseudo_labelmap_copy[2]
             del pseudo_labelmap_copy[3]
             pseudo_labelmap_copy[2] = "kidney"
@@ -124,7 +124,7 @@ class Postprocessing():
         """
         Remove slices with no annotations.
         """
-        if part in [253, 259]:
+        if part in [553, 559]:
             pseudo = remove_no_label_slides_pred(
                 pseudo, self.slices_with_all_255)
         return pseudo_labelmap, pseudo
@@ -203,7 +203,7 @@ class Postprocessing():
 class RecalculateAvgOrganVolume():
     """
     gt: taken from datasets (having GTs)
-    Goal: to be able to used in combination with our models 251-259's available targets
+    Goal: to be able to used in combination with our models 551-559's available targets
     """
 
     def __init__(self, avg_volume: dict, tolerance: float):
