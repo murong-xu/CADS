@@ -153,6 +153,78 @@ def save_metric(gt_labelmap, ids, hd95matrix, hdmatrix, nsdmatrix, dicematrix, o
 
     np.savez(filename, dice=dicematrix, hd95=hd95matrix,
              hd=hdmatrix, nsd=nsdmatrix, splits=local_splits)
+    
+def append_df_to_excel(filename, df, sheet_name='Sheet1'):
+    # Check if the file exists
+    if os.path.isfile(filename):
+        with pd.ExcelWriter(filename, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+            startrow = writer.sheets[sheet_name].max_row
+            df.to_excel(writer, startrow=startrow, header=False, index=False)
+    else:
+        # Create a new workbook
+        startrow = 0
+        df.to_excel(filename, sheet_name=sheet_name, startrow=startrow, index=False)
+
+def save_metric_per_id(gt_labelmap, id, hd95, hd, nsd, dice, outputdir, datasetname, split=None, part=None):
+    columns = ['id', 'split'] + list(gt_labelmap.values())
+    
+    outfolder = os.path.join(outputdir, datasetname)
+    if not os.path.exists(outfolder):
+        os.makedirs(outfolder)
+
+    dice_data = {'id': id, 'split': split}
+    hd_data = {'id': id, 'split': split}
+    hd95_data = {'id': id, 'split': split}
+    nsd_data = {'id': id, 'split': split}
+
+    for i, name in enumerate(gt_labelmap.values()):
+        dice_data[name] = dice[i]
+        hd_data[name] = hd[i]
+        hd95_data[name] = hd95[i]
+        nsd_data[name] = nsd[i]
+
+    dice_df = pd.DataFrame([dice_data])
+    hd_df = pd.DataFrame([hd_data])
+    hd95_df = pd.DataFrame([hd95_data])
+    nsd_df = pd.DataFrame([nsd_data])
+
+    dice_filename = os.path.join(outfolder, f'dice_score_{datasetname}.xlsx')
+    hd_filename = os.path.join(outfolder, f'hd_score_{datasetname}.xlsx')
+    hd95_filename = os.path.join(outfolder, f'hd95_score_{datasetname}.xlsx')
+    nsd_filename = os.path.join(outfolder, f'normalized_distance_{datasetname}.xlsx')
+
+    if part is not None:
+        dice_filename = os.path.join(outfolder, f'dice_score_{datasetname}_part_{part}.xlsx')
+        hd_filename = os.path.join(outfolder, f'hd_score_{datasetname}_part_{part}.xlsx')
+        hd95_filename = os.path.join(outfolder, f'hd95_score_{datasetname}_part_{part}.xlsx')
+        nsd_filename = os.path.join(outfolder, f'normalized_distance_{datasetname}_part_{part}.xlsx')
+
+    append_df_to_excel(dice_filename, dice_df)
+    append_df_to_excel(hd_filename, hd_df)
+    append_df_to_excel(hd95_filename, hd95_df)
+    append_df_to_excel(nsd_filename, nsd_df)
+
+    metrics_filename = os.path.join(outfolder, f'metrics_{datasetname}.npz')
+    if part is not None:
+        metrics_filename = os.path.join(outfolder, f'metrics_{datasetname}_part_{part}.npz')
+
+    if os.path.exists(metrics_filename):
+        existing_data = np.load(metrics_filename)
+        existing_dice = existing_data['dice']
+        existing_hd95 = existing_data['hd95']
+        existing_hd = existing_data['hd']
+        existing_nsd = existing_data['nsd']
+        existing_splits = existing_data['splits']
+        
+        new_dice = np.vstack([existing_dice, dice])
+        new_hd95 = np.vstack([existing_hd95, hd95])
+        new_hd = np.vstack([existing_hd, hd])
+        new_nsd = np.vstack([existing_nsd, nsd])
+        new_splits = np.append(existing_splits, split)
+        
+        np.savez(metrics_filename, dice=new_dice, hd95=new_hd95, hd=new_hd, nsd=new_nsd, splits=new_splits)
+    else:
+        np.savez(metrics_filename, dice=np.array([dice]), hd95=np.array([hd95]), hd=np.array([hd]), nsd=np.array([nsd]), splits=np.array([split]))
 
 
 def save_missing_structure_check(count, output_folder, datasetname):
