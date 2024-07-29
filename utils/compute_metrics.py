@@ -234,7 +234,7 @@ def compute_metrics_other(input_dir, output_folder, path_avg_organ_volume, split
                                                pred_img=pred_binary,
                                                # csv_file='cvsfile.csv',
                                                spacing=spacing,
-                                               metrics=None)
+                                               metrics=['dice', 'hd', 'hd95'])
 
                     hd95matrix[i, key] = metrics[0]['hd95'][0]
                     hdmatrix[i, key] = metrics[0]['hd'][0]
