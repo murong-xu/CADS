@@ -384,36 +384,36 @@ head_labelmap = {
 
 han_seg_labelmap = {
     0: 'background',
-    1: 'OAR_A_Carotid_L',
-    2: 'OAR_A_Carotid_R',
-    3: 'OAR_Arytenoid',
-    4: 'OAR_Bone_Mandible',
-    5: 'OAR_Brainstem',
-    6: 'OAR_BuccalMucosa',
-    7: 'OAR_Cavity_Oral',
-    8: 'OAR_Cochlea_L',
-    9: 'OAR_Cochlea_R',
-    10: 'OAR_Cricopharyngeus',
-    11: 'OAR_Esophagus_S',
-    12: 'OAR_Eye_AL',
-    13: 'OAR_Eye_AR',
-    14: 'OAR_Eye_PL',
-    15: 'OAR_Eye_PR',
-    16: 'OAR_Glnd_Lacrimal_L',
-    17: 'OAR_Glnd_Lacrimal_R',
-    18: 'OAR_Glnd_Submand_L',
-    19: 'OAR_Glnd_Submand_R',
-    20: 'OAR_Glnd_Thyroid',
-    21: 'OAR_Glottis',
-    22: 'OAR_Larynx_SG',
-    23: 'OAR_Lips',
-    24: 'OAR_OpticChiasm',
-    25: 'OAR_OpticNrv_L',
-    26: 'OAR_OpticNrv_R',
-    27: 'OAR_Parotid_L',
-    28: 'OAR_Parotid_R',
-    29: 'OAR_Pituitary',
-    30: 'OAR_SpinalCord',
+    1: 'OAR_A_Carotid_L',  # Carotid artery (left)
+    2: 'OAR_A_Carotid_R',  # Carotid artery (right)
+    3: 'OAR_Arytenoid',  # Arytenoids
+    4: 'OAR_Bone_Mandible',  # Mandible
+    5: 'OAR_Brainstem',  # Brainstem
+    6: 'OAR_BuccalMucosa',  # Buccal mucosa
+    7: 'OAR_Cavity_Oral',  # Oral cavity 
+    8: 'OAR_Cochlea_L',  # Cochlea (left) 
+    9: 'OAR_Cochlea_R',  # Cochlea (right) 
+    10: 'OAR_Cricopharyngeus',  # Cricopharyngeal inlet
+    11: 'OAR_Esophagus_S',  # Cervical esophagus
+    12: 'OAR_Eye_AL',  # Anterior eyeball segment (left)
+    13: 'OAR_Eye_AR',  # Anterior eyeball segment (right)
+    14: 'OAR_Eye_PL',  # Posterior eyeball segment (left)
+    15: 'OAR_Eye_PR',  # Posterior eyeball segment (right)
+    16: 'OAR_Glnd_Lacrimal_L',  # Lacrimal gland (left)
+    17: 'OAR_Glnd_Lacrimal_R',  # Lacrimal gland (right)
+    18: 'OAR_Glnd_Submand_L',  # Submandibular gland (left)
+    19: 'OAR_Glnd_Submand_R',  # Submandibular gland (right)
+    20: 'OAR_Glnd_Thyroid',  # Thyroid
+    21: 'OAR_Glottis',  # Larynx—glottis
+    22: 'OAR_Larynx_SG',  # Larynx—supraglottic
+    23: 'OAR_Lips',  # Lips
+    24: 'OAR_OpticChiasm',  # Optic chiasm
+    25: 'OAR_OpticNrv_L',  # Optic nerve (left)
+    26: 'OAR_OpticNrv_R',  # Optic nerve (right)
+    27: 'OAR_Parotid_L',  # Parotid gland (left)
+    28: 'OAR_Parotid_R',  # Parotid gland (right)
+    29: 'OAR_Pituitary',  # Pituitary gland
+    30: 'OAR_SpinalCord',  # Spinal cord
 }
 
 saros_seg_labelmap = {
