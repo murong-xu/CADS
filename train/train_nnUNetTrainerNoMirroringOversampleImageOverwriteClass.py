@@ -1,3 +1,8 @@
+# import os
+# os.environ['nnUNet_raw'] = "/net/cephfs/shares/menze.dqbm.uzh/murong/20k/final_nnUNets/nnUNet_raw"
+# os.environ['nnUNet_preprocessed'] = "/net/cephfs/shares/menze.dqbm.uzh/murong/20k/final_nnUNets/nnUNet_preprocessed"
+# os.environ['nnUNet_results'] = "/net/cephfs/shares/menze.dqbm.uzh/murong/20k/final_nnUNets/nnUNet_results"
+
 from nnunetv2.run.run_training import run_training_entry
 import argparse
 import sys
@@ -14,21 +19,20 @@ def parse_arguments():
                         help='[OPTIONAL] Use this flag to specify a custom trainer. Default: nnUNetTrainer')
     parser.add_argument('-p', type=str, required=False, default='nnUNetPlans',
                         help='[OPTIONAL] Use this flag to specify a custom plans identifier. Default: nnUNetPlans')
-    parser.add_argument('-prob_minority', type=float, default=None, required=False)
+    parser.add_argument('-oversampling_summary', type=str, default=None, required=False)
     args = parser.parse_args()
     return args
 
 def main():
-    sys.argv = ['/home/murong/22k/OMASeg_sync/OMASeg/train/train.py',
-                '553', 
+    sys.argv = ['/data/muxu/20k/OMASeg/train/train_nnUNetTrainerNoMirroringOversampleImageOverwriteClass.py',
+                '552', 
                 '3d_fullres', 
                 'all',
                 '-tr', 'nnUNetTrainerNoMirroringOversampleImageOverwriteClass',
                 '-p', 'nnUNetResEncUNetLPlans',
-                '-prob_minority', '0.35'
+                '-oversampling_summary', '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/best_22k/oversampling/oversampling_552.pkl'
                 ]
     run_training_entry()
-    print('a')
 
 if __name__ == "__main__":
     main()
