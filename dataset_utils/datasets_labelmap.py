@@ -519,3 +519,87 @@ dataset_times = {
     '0040_saros': '1-00:00:00',
     '0041_3k': '1-00:00:00',
 }
+
+# Extra test sets
+segthor_labelmap = {
+    0: 'background',
+    1: 'esophagus',
+    2: 'heart',
+    3: 'trachea',
+    4: 'aorta',
+}
+
+ribseg_labelmap = {
+    0: "background",
+    1: "rib_left_1",
+    2: "rib_left_2",
+    3: "rib_left_3",
+    4: "rib_left_4",
+    5: "rib_left_5",
+    6: "rib_left_6",
+    7: "rib_left_7",
+    8: "rib_left_8",
+    9: "rib_left_9",
+    10: "rib_left_10",
+    11: "rib_left_11",
+    12: "rib_left_12",
+    13: "rib_right_1",
+    14: "rib_right_2",
+    15: "rib_right_3",
+    16: "rib_right_4",
+    17: "rib_right_5",
+    18: "rib_right_6",
+    19: "rib_right_7",
+    20: "rib_right_8",
+    21: "rib_right_9",
+    22: "rib_right_10",
+    23: "rib_right_11",
+    24: "rib_right_12"
+}
+
+word_labelmap = {
+    0: 'background',
+    1: 'liver',
+    2: 'spleen',
+    3: 'kidney_left',
+    4: 'kidney_right',
+    5: 'stomach',
+    6: 'gallbladder',
+    7: 'esophagus',
+    8: 'pancreas',
+    9: 'duodenum',
+    10: 'colon',
+    11: 'intestine',
+    12: 'adrenal',
+    13: 'rectum',
+    14: 'urinary_bladder',
+    15: 'head_of_femur_left',
+    16: 'head_of_femur_right',
+}
+
+word_lits_labelmap = {
+    0: 'background',
+    1: 'liver',
+    2: 'spleen',
+    3: 'kidney_left',
+    4: 'kidney_right',
+    5: 'stomach',
+    6: 'gallbladder',
+    7: 'esophagus',
+    8: 'pancreas',
+    9: 'duodenum',
+    10: 'colon',
+    11: 'intestine',
+    12: 'adrenal',
+    13: 'rectum',
+    14: 'urinary_bladder',
+    15: 'head_of_femur_left',
+    16: 'head_of_femur_right',
+}
+
+dataset2labelmap_extra_test = {
+    '0080_SegTHOR': segthor_labelmap,
+    '0081_ribseg': ribseg_labelmap,
+    '0082_word': word_labelmap,
+    '0083_word_lits': word_lits_labelmap,
+}

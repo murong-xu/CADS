@@ -14,8 +14,20 @@ from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid
 from utils.snapshot import generate_snapshot
 from utils.libs import time_it
 
+# TODO: 
+TRAINERS = {
+    551: 'nnUNetTrainerNoMirroring',
+    552: 'nnUNetTrainerNoMirroringOversampleImage',
+    553: 'nnUNetTrainerNoMirroring',
+    554: 'nnUNetTrainerNoMirroring',
+    555: 'nnUNetTrainerNoMirroring',
+    556: 'nnUNetTrainerNoMirroring',
+    557: 'nnUNetTrainerNoMirroring',
+    558: 'nnUNetTrainerNoMirroring',
+    559: 'nnUNetTrainerNoMirroring',
+}
 
-def get_task_model_folder(task_id: int, model_folder: str, trainer: str):
+def get_task_model_folder(task_id: int, model_folder: str):
     """
     Find the sub-directory containing 'nnUNetResEncUNetLPlans' for a given task in the model folder.
     """
@@ -26,6 +38,7 @@ def get_task_model_folder(task_id: int, model_folder: str, trainer: str):
             subfolder = d.resolve()
             subdirs = [sd for sd in subfolder.glob(
                 "*") if sd.is_dir() and 'nnUNetResEncUNetLPlans' in sd.name]
+            trainer = TRAINERS[task_id]
             if subdirs:
                 for subdir in subdirs:
                     if trainer in subdir.name:
@@ -48,7 +61,7 @@ class nnUNetv2Predictor():
     This class initializes an nnUNetv2 predictor for a specified task and provides methods for both batch and single image predictions.
     """
 
-    def __init__(self, model_folder, task_id, device, batch_predict=False, folds='all', checkpoint='checkpoint_final.pth', trainer='nnUNetTrainerNoMirroring', num_threads_preprocessing=6, num_threads_nifti_save=2, verbose=False):
+    def __init__(self, model_folder, task_id, device, batch_predict=False, folds='all', checkpoint='checkpoint_final.pth', num_threads_preprocessing=6, num_threads_nifti_save=2, verbose=False):
         self.num_threads_preprocessing = num_threads_preprocessing
         self.num_threads_nifti_save = num_threads_nifti_save
         self.device = device
@@ -64,7 +77,7 @@ class nnUNetv2Predictor():
                                          verbose_preprocessing=verbose)
         task_id = int(task_id)
         try:
-            task_model_folder = get_task_model_folder(task_id, model_folder, trainer)
+            task_model_folder = get_task_model_folder(task_id, model_folder)
         except ValueError as e:
             print(e)
             sys.exit(1)
@@ -122,7 +135,7 @@ def save_targets_to_nifti(save_separate_targets, output_targets_dir, affine, lab
                   basename=patient_id, original_affine=affine), targets, num_cpus=nr_threads_saving)
 
 
-def predict(files_in, folder_out, model_folder, task_ids, trainer, folds='all', preprocess_omaseg=False, save_all_combined_seg=True, snapshot=True, save_separate_targets=False, num_threads_preprocessing=1, nr_threads_saving=6, verbose=False):
+def predict(files_in, folder_out, model_folder, task_ids, folds='all', preprocess_omaseg=False, save_all_combined_seg=True, snapshot=True, save_separate_targets=False, num_threads_preprocessing=1, nr_threads_saving=6, verbose=False):
     """
     Loop images and use nnUNetv2 models to predict. 
     """
@@ -137,7 +150,7 @@ def predict(files_in, folder_out, model_folder, task_ids, trainer, folds='all', 
     # Init nnUNetv2 predictor
     models = {}
     for task_id in task_ids:
-        models[task_id] = nnUNetv2Predictor(model_folder, task_id, device, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth', trainer=trainer,
+        models[task_id] = nnUNetv2Predictor(model_folder, task_id, device, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth',
                                             num_threads_preprocessing=num_threads_preprocessing, num_threads_nifti_save=nr_threads_saving, verbose=verbose)
 
     # Loop images

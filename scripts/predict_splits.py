@@ -1,19 +1,10 @@
 import argparse
 import torch
+import os
 
 from utils.inference import predict
 from dataset_utils.select_files import select_imgs
 from dataset_utils.bodyparts_labelmaps import labelmap_all_structure
-
-
-# import debugpy
-# debugpy.listen(('0.0.0.0', 4444))
-# print("Waiting for debugger attach")
-# debugpy.wait_for_client()
-# debugpy.breakpoint()
-# print('You can debug your script now')
-
-
 
 def check_input_task(value):
     valid_numbers = {551, 552, 553, 554, 555, 556, 557, 558, 559}
@@ -60,7 +51,7 @@ def main():
                         help="Output directory for segmentation masks", required=True)
     
     parser.add_argument("-split", "--split", type=int,
-                        help="val=2, test=0, train=1", required=True)
+                        help="val=2, test=0, train=1", required=False)
 
     parser.add_argument("-model", metavar="models_directory",
                         dest="model_folder", help="Directory of nnUNet models", required=True)
@@ -68,8 +59,6 @@ def main():
     parser.add_argument("-task", dest='task_id', type=check_input_task,
                         help="Input either 'all' or a subset of [551, 552, 553, 554, 555, 556, 557, 558, 559]")
     
-    parser.add_argument("-trainer", "--trainer", type=str, required=False, default='nnUNetTrainerNoMirroring')
-
     parser.add_argument('--preprocessing', action='store_true',
                         help='Set this flag to enable OMASeg preprocessing (reorient RAS, resampling 1.5, remove rotation and translation)', default=False)
 
@@ -99,9 +88,14 @@ def main():
 
     folds = 'all'
 
-    test_images = select_imgs(folder=args.input_folder, split=args.split)
+    if args.split is not None:
+        test_images = select_imgs(folder=args.input_folder, split=args.split)
+    else:
+        test_images = [os.path.join(root, filename) for root, dirnames, filenames in os.walk(
+            args.input_folder) for filename in filenames if filename.endswith(".nii.gz")]
+    test_images.sort()
 
-    predict(test_images, args.output_folder, args.model_folder, args.task_id, args.trainer, folds=folds,
+    predict(test_images, args.output_folder, args.model_folder, args.task_id, folds=folds,
             preprocess_omaseg=args.preprocessing, save_all_combined_seg=args.save_all_combined_seg,
             snapshot=args.snapshot, save_separate_targets=args.save_targets,
             num_threads_preprocessing=args.nr_thr_preprocess, nr_threads_saving=args.nr_thr_saving, verbose=args.verbose)

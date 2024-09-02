@@ -7,8 +7,12 @@ replacements = {
     'brainstem': 'OAR_Brainstem',  # remove duplicate in 556
     'left_parotid_gland': 'OAR_Parotid_L',  # remove duplicate in 556
     'right_parotid_gland': 'OAR_Parotid_R',  # remove duplicate in 556
+    'left parotid gland': 'OAR_Parotid_L',  # remove duplicate in 556
+    'right parotid gland': 'OAR_Parotid_R',  # remove duplicate in 556
     'left_submandibular gland': 'OAR_Glnd_Submand_L',  # remove duplicate in 556
     'right_submandibular_gland': 'OAR_Glnd_Submand_R',  # remove duplicate in 556
+    'left submandibular gland': 'OAR_Glnd_Submand_L',  # remove duplicate in 556
+    'right submandibular gland': 'OAR_Glnd_Submand_R',  # remove duplicate in 556
     'OAR_SpinalCord': 'spinal_cord',  # remove duplicate in 558
     'right adrenal gland': 'adrenal_gland_right',
     'left adrenal gland': 'adrenal_gland_left',
@@ -18,6 +22,10 @@ replacements = {
     'inferior vena cava': 'inferior_vena_cava',
     'small bowel': 'small_bowel',
     'esophagous': 'esophagus',
+    'bowel bag': 'bowel_bag',
+    'seminal vasicle': 'seminal_vesicle',
+    'right mammary gland': 'right_mammary_gland',
+    'left mammary gland': 'left_mammary_gland',
     'prostate/uterus': 'prostate',
     'bladder': 'urinary_bladder', 
     # 0037_totalseg labels -> 9 models' predictions
@@ -29,6 +37,7 @@ replacements = {
     'urinary bladder': 'urinary_bladder',
     # other new updates
     'thyroid gland': 'OAR_Glnd_Thyroid', # 0001_visceral_gc
+    'spinal canal': 'spinal_canal',
     }
 
 
