@@ -56,6 +56,9 @@ def main():
                         help="'all' or indices (comma-separated)", type=all_or_indices, required=False)
     parser.add_argument("-penalize_FP", "--penalize_FP",
                         help="True for giving penalization on FP predictions in metric scores (Dice, HD, etc.).", required=True)
+    parser.add_argument("-extra_test", "--extra_test", action="store_true", default=False)
+    parser.add_argument('--extra_test_pseudo_files_range', type=str, default="[1-9]", help='Range of pseudo files to consider')
+
     args = parser.parse_args()
 
     pred_dir = args.preddir
@@ -73,10 +76,10 @@ def main():
     datasetfolders = get_dataset_folders(pred_dir, eval_datasets, split)
 
     for datasetfolder in datasetfolders:
-        if split:
+        if not args.extra_test:
             compute_metrics(datasetfolder, output_folder, path_avg_organ_volume, int(split), score_penalize_FP, totalseg_group)
         else:
-            compute_metrics_from_extra_test_set(datasetfolder, output_folder, path_avg_organ_volume, score_penalize_FP)
+            compute_metrics_from_extra_test_set(datasetfolder, output_folder, path_avg_organ_volume, score_penalize_FP, pseudo_files_range=args.extra_test_pseudo_files_range)
 
 
 

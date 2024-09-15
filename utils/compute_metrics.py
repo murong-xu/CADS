@@ -471,7 +471,7 @@ def compute_metrics(input_dir, output_folder, path_avg_organ_volume, split, scor
 
 
 @time_it
-def compute_metrics_from_extra_test_set(input_dir, output_folder, path_avg_organ_volume, score_penalize_FP):
+def compute_metrics_from_extra_test_set(input_dir, output_folder, path_avg_organ_volume, score_penalize_FP, pseudo_files_range: str = "[1-9]"):
     name_split = input_dir.split('/')
     dataset = name_split[-2]
 
@@ -486,7 +486,6 @@ def compute_metrics_from_extra_test_set(input_dir, output_folder, path_avg_organ
     gt_folder = os.path.join(gt_all_folder, dataset, 'labels')
     gtfiles = [os.path.join(gt_folder, i+'.nii.gz') for i in ids]
     splits = [0] * len(gtfiles)
-    pseudo_files_range = "[1-9]"
 
     # Use average organ size for setting thresholds
     with open(path_avg_organ_volume, "rb") as f:
