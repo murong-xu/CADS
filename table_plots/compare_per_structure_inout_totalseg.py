@@ -23,6 +23,7 @@ splits = ['test']
 significance_level = 0.05
 stat_test_method = paired_t_test
 filter_transitional_in_verse = True
+exclude_face_from_overall_score = True
 
 path_count_GT_number = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/per_structure_GT_image_counts.pkl'
 path_count_GT_from_totalseg_number = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/per_structure_GT_image_from_totalseg_counts.pkl'
@@ -184,6 +185,11 @@ for prefix in prefixes:
             'overlapping': list(set(list(labelmap_all_structure_renamed.values())) - set(totalseg_exclude_to_compare)),
             'all': list(labelmap_all_structure_renamed.values()),
         }
+
+        # Exclude 'Face' from categories if exclude_face_from_overall_score is True
+        if exclude_face_from_overall_score:
+            for key in categories.keys():
+                categories[key] = [structure for structure in categories[key] if structure != 'Face']
 
         category_stats = {cat: {'score': [], '95% CI': [], 'IQR': []} for cat in categories.keys()}
         category_means[distribution] = {}
