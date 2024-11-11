@@ -5,21 +5,21 @@ import pickle
 from collections import defaultdict
 
 from table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, bootstrap_ci, wilcoxon_test, wilcoxon_test_median, paired_t_test
-from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed, totalseg_exclude_to_compare
+from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed
 
 
 # TODO: param
-output_folder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/compare_totalseg_omaseg'
-analysis_name = '1000_raw_vs_roirobust'
+output_folder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/compare_omaseg'
+analysis_name = 'raw_vs_postprocessed'
 stat_name = 'paired_t_test'
 
 experiment_results_path = {
-    'omaseg': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/final_models/scores_dependency/test_0',
-    'totalsegmentator': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
+    'raw': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/final_models/scores_dependency/test_0',
+    'postprocess': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/debug/postprocess_score/test_0',
 }
 
 prefixes = ['dice', 'hd95', 'hd', 'normalized_distance']
-distributions = ['in', 'out', 'all']
+distributions = ['all']
 splits = ['test']
 significance_level = 0.05
 stat_test_method = paired_t_test
@@ -31,11 +31,11 @@ path_count_GT_from_totalseg_number = '/net/cephfs/shares/menze.dqbm.uzh/murong/2
 path_count_GT_volume = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/per_structure_GT_volume_clipped_avg_counts.pkl'
 
 experiment_to_name_dict = {
-    'omaseg': 'OMASeg',
-    'totalsegmentator': 'TotalSeg',
+    'raw': 'raw',
+    'postprocess': 'postprocess',
 }
 
-# totalseg_exclude_to_compare = []
+totalseg_exclude_to_compare = []
 
 highlight_diff_threshold = {
     'dice': 0.02,
@@ -131,8 +131,8 @@ for prefix in prefixes:
         structure: 0 for structure in table_names} for distribution in distributions}
     for distribution in distributions:
         for structure in table_names:
-            omaseg_scores = experiments_dicts['OMASeg'][distribution][structure]
-            totalseg_scores = experiments_dicts['TotalSeg'][distribution][structure]
+            omaseg_scores = experiments_dicts['raw'][distribution][structure]
+            totalseg_scores = experiments_dicts['postprocess'][distribution][structure]
 
             original_length = len(omaseg_scores)
             aligned_omaseg, aligned_totalseg = align_and_filter_scores(
@@ -144,13 +144,13 @@ for prefix in prefixes:
 
             valid_test_data_points[distribution][structure] = new_length
 
-            experiments_dicts['OMASeg'][distribution][structure] = aligned_omaseg
-            experiments_dicts['TotalSeg'][distribution][structure] = aligned_totalseg
+            experiments_dicts['raw'][distribution][structure] = aligned_omaseg
+            experiments_dicts['postprocess'][distribution][structure] = aligned_totalseg
 
     category_means = {} 
     for distribution in distributions:
-        omaseg_scores = experiments_dicts['OMASeg'][distribution]
-        totalseg_scores = experiments_dicts['TotalSeg'][distribution]
+        omaseg_scores = experiments_dicts['raw'][distribution]
+        totalseg_scores = experiments_dicts['postprocess'][distribution]
         stat_results = []
         for structure in table_names:
             if structure in totalseg_exclude_to_compare:
@@ -174,10 +174,10 @@ for prefix in prefixes:
                     print(
                         f"Sample size mismatch for {structure} in {distribution} distribution:")
                     print(
-                        f"  OMASeg: {len(omaseg_structure_scores)}, TotalSeg: {len(totalseg_structure_scores)}")
+                        f"  raw: {len(omaseg_structure_scores)}, postprocess: {len(totalseg_structure_scores)}")
 
                 stat, p, pos_diff, neg_diff, better_model = stat_test_method(
-                    omaseg_structure_scores, totalseg_structure_scores, 'OMASeg', 'TotalSeg', p_value=significance_level, higher_better=higher_better)
+                    omaseg_structure_scores, totalseg_structure_scores, 'raw', 'postprocess', p_value=significance_level, higher_better=higher_better)
 
                 stat_results.append({
                     'Organ': structure,
@@ -195,8 +195,6 @@ for prefix in prefixes:
         d[f'{distribution} Better Model'] = stat_df['Better Model']
 
         categories = {
-            'totalseg_v1': list(labelmap_all_structure_renamed.values())[:104],
-            'overlapping': list(set(list(labelmap_all_structure_renamed.values())) - set(totalseg_exclude_to_compare)),
             'all': list(labelmap_all_structure_renamed.values()),
         }
 
@@ -211,7 +209,7 @@ for prefix in prefixes:
             category_stats = {cat: {'score': [], '95% CI': [], 'IQR': []} for cat in categories.keys()}
             category_means[distribution][experiment] = {}
             for structure, values in data[distribution].items():
-                if experiment == 'TotalSeg' and structure in totalseg_exclude_to_compare:
+                if structure in totalseg_exclude_to_compare:
                     stats['mean±std'].append(None)
                     stats['95% CI'].append(None)
                     stats['IQR'].append(None)
@@ -373,9 +371,9 @@ for prefix in prefixes:
             better_model_col = output_df.columns.get_loc(f'{distribution} Better Model')
             for row in range(output_df.shape[0]):
                 better_model = output_df[f'{distribution} Better Model'].iloc[row]
-                if better_model == 'TotalSeg':
+                if better_model == 'postprocess':
                     worksheet.write(row + 1, better_model_col, better_model, format_totalsegmentator)
-                elif better_model == 'OMASeg':
+                elif better_model == 'raw':
                     worksheet.write(row + 1, better_model_col, better_model, format_omaseg)
 
     # Store means

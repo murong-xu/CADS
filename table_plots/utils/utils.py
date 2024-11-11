@@ -3,12 +3,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-import statsmodels.api as sm
-from statsmodels.formula.api import ols
-from statsmodels.stats.multicomp import pairwise_tukeyhsd
-from statsmodels.stats.oneway import anova_oneway
-from scikit_posthocs import posthoc_dunn
-
 from dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
 
 
@@ -65,7 +59,7 @@ def get_task_id(structure):
     return None 
 
 
-def compare_models(model1_results, model2_results, model1_name, model2_name, stat_test_method='wilcoxon_test_median'):
+def compare_models_stat_test(model1_results, model2_results, model1_name, model2_name, stat_test_method='paired_t_test', p_value=0.05, higher_better=True):
     combined_results = []
 
     for organ, scores in model1_results.items():
@@ -79,11 +73,11 @@ def compare_models(model1_results, model2_results, model1_name, model2_name, sta
         removed_points = original_length - new_length
 
         if stat_test_method == 'wilcoxon_test_median':
-            stat, p, pos_diff, neg_diff, better_model = wilcoxon_test_median(aligned_model1, aligned_model2)
+            stat, p, pos_diff, neg_diff, better_model = wilcoxon_test_median(aligned_model1, aligned_model2, model1_name, model2_name, p_value=p_value, higher_better=higher_better)
         elif stat_test_method == 'wilcoxon_test':
-            stat, p, pos_diff, neg_diff, better_model = wilcoxon_test(aligned_model1, aligned_model2)
+            stat, p, pos_diff, neg_diff, better_model = wilcoxon_test(aligned_model1, aligned_model2, model1_name, model2_name, p_value=p_value, higher_better=higher_better)
         elif stat_test_method == 'paired_t_test':
-            stat, p, pos_diff, neg_diff, better_model = paired_t_test(aligned_model1, aligned_model2)
+            stat, p, pos_diff, neg_diff, better_model = paired_t_test(aligned_model1, aligned_model2, model1_name, model2_name, p_value=p_value, higher_better=higher_better)
         else:
             raise ValueError(f"Unsupported statistical test method: {stat_test_method}")
 
@@ -114,32 +108,114 @@ def bootstrap_ci(data, n_iterations=10000, ci=0.95):
     return lower_bound, upper_bound
 
 
-def wilcoxon_test(scores_1, scores_2, p_value=0.05):
+def wilcoxon_test(scores_1, scores_2, model_1, model_2, p_value=0.05, higher_better=True):
+    """
+    Performs Wilcoxon signed-rank test to compare two models' scores
+    
+    Args:
+        scores_1: Scores from model_1 
+        scores_2: Scores from model_2
+        model_1: Name of the first model
+        model_2: Name of the second model
+        p_value: Significance threshold (default: 0.05)
+        higher_better: Whether higher scores are better (True for metrics like Dice, False for HD) (default: True)
+        
+    Returns:
+        stat: The test statistic
+        p: The p-value from the test
+        positive_differences: Number of cases where model_1 > model_2
+        negative_differences: Number of cases where model_1 < model_2
+        better_model: Name of significantly better model (or None if no significant difference)
+    """
     if len(scores_1) != len(scores_2):
         return None, None, None, None, "Unequal sample sizes"
     
     if len(scores_1) == 0:
         return None, None, None, None, "No data"
     
+    # Calculate differences
     differences = np.array(scores_1) - np.array(scores_2)
+    if not higher_better:
+        # For metrics where lower is better, invert the differences
+        differences = -differences
+    
+    # Count simple differences (for additional information)
+    positive_differences = np.sum(differences > 0)
+    negative_differences = np.sum(differences < 0)
+
+    try:
+        # The test statistic is based on the ranks of the absolute differences
+        stat, p = stats.wilcoxon(scores_1, scores_2, alternative='two-sided')
+
+        # Determine better model based on the sign of the differences and their ranks
+        if p < p_value:
+            # Calculate rank sums for positive and negative differences
+            abs_diff = np.abs(differences)
+            ranks = stats.rankdata(abs_diff)
+            signed_ranks = ranks * np.sign(differences)
+            
+            positive_rank_sum = np.sum(signed_ranks[signed_ranks > 0])
+            negative_rank_sum = abs(np.sum(signed_ranks[signed_ranks < 0]))
+            
+            if positive_rank_sum > negative_rank_sum:
+                better_model = model_1
+            elif positive_rank_sum < negative_rank_sum:
+                better_model = model_2
+            else:
+                better_model = "Unknown"
+        else:
+            better_model = None
+    except ValueError:
+        return None, None, None, None, "Wilcoxon test failed"
+
+    return stat, p, positive_differences, negative_differences, better_model
+
+def wilcoxon_test_median(scores_1, scores_2, model_1, model_2, p_value=0.05, higher_better=True):
+    """
+    Performs Wilcoxon signed-rank test with median comparison
+    
+    Args:
+        scores_1: Scores from model_1 (main model)
+        scores_2: Scores from model_2 (baseline model)
+        model_1: Name of the first model
+        model_2: Name of the second model
+        p_value: Significance threshold (default: 0.05)
+        higher_better: Whether higher scores are better (default: True)
+        
+    Returns:
+        stat: The Wilcoxon test statistic
+        p: The p-value from the test
+        positive_differences: Number of cases where model_1 > model_2
+        negative_differences: Number of cases where model_1 < model_2
+        better_model: Name of significantly better model (or None if no significant difference)
+    """
+    if len(scores_1) != len(scores_2):
+        return None, None, None, None, "Unequal sample sizes"
+    
+    if len(scores_1) == 0:
+        return None, None, None, None, "No data"
+        
+    try:
+        stat, p = stats.wilcoxon(scores_1, scores_2, alternative='two-sided')
+    except ValueError:
+        return None, None, None, None, "Wilcoxon test failed"
+    
+    median_1 = np.median(scores_1)
+    median_2 = np.median(scores_2)
+    if not higher_better:
+        median_1, median_2 = -median_1, -median_2
+    
+    differences = np.array(scores_1) - np.array(scores_2)
+    if not higher_better:
+        differences = -differences
     positive_differences = np.sum(differences > 0)
     negative_differences = np.sum(differences < 0)
     
-    try:
-        stat, p = stats.wilcoxon(scores_1, scores_2)
-        N = len(scores_1)
-        Z = (stat - (N * (N + 1) / 4)) / np.sqrt((N * (N + 1) * (2 * N + 1)) / 24)
-        r = Z / np.sqrt(N)
-
-    except ValueError:
-        return None, None, None, None, "Wilcoxon test failed"
-
     if p < p_value:
-        
-        if positive_differences > negative_differences:
-            better_model = "OMASeg"
-        elif positive_differences < negative_differences:
-            better_model = "TotalSeg"
+        if median_1 > median_2:
+            better_model = model_1
+        elif median_1 < median_2:
+            better_model = model_2
         else:
             better_model = "Unknown"
     else:
@@ -147,37 +223,25 @@ def wilcoxon_test(scores_1, scores_2, p_value=0.05):
 
     return stat, p, positive_differences, negative_differences, better_model
 
-def wilcoxon_test_median(scores_1, scores_2, p_value=0.05):
-    if len(scores_1) != len(scores_2):
-        return None, None, None, None, "Unequal sample sizes"
+def paired_t_test(scores_1, scores_2, model_1, model_2, p_value=0.05, higher_better=True):
+    """
+    Performs paired t-test to compare two models' scores
     
-    if len(scores_1) == 0:
-        return None, None, None, None, "No data"
+    Args:
+        scores_1: Scores from model_1 
+        scores_2: Scores from model_2
+        model_1: Name of the first model
+        model_2: Name of the second model
+        p_value: Significance threshold (default: 0.05)
+        higher_better: Whether higher scores are better (True for metrics like Dice, False for HD) (default: True)
         
-    try:
-        stat, p = stats.wilcoxon(scores_1, scores_2)
-        N = len(scores_1)
-        Z = (stat - (N * (N + 1) / 4)) / np.sqrt((N * (N + 1) * (2 * N + 1)) / 24)
-        r = Z / np.sqrt(N)
-
-    except ValueError:
-        return None, None, None, None, "Wilcoxon test failed"
-    
-    if p < p_value:
-        if np.median(scores_1) > np.median(scores_2):
-            better_model = "OMASeg"
-        elif np.median(scores_1) < np.median(scores_2):
-            better_model = "TotalSeg"
-        else:
-            better_model = "Unknown"
-    else:
-        better_model = None
-    positive_differences = np.sum(np.array(scores_1) > np.array(scores_2))
-    negative_differences = np.sum(np.array(scores_1) < np.array(scores_2))
-
-    return stat, p, positive_differences, negative_differences, better_model
-
-def paired_t_test(scores_1, scores_2,  p_value=0.05):
+    Returns:
+        t_statistic: The t-statistic from the test
+        p: The p-value from the test
+        positive_differences: Number of cases where model_1 > model_2
+        negative_differences: Number of cases where model_1 < model_2
+        better_model: Name of significantly better model (or None if no significant difference)
+    """
     if len(scores_1) != len(scores_2):
         return None, None, None, None, "Unequal sample sizes"
     
@@ -189,190 +253,28 @@ def paired_t_test(scores_1, scores_2,  p_value=0.05):
     except ValueError:
         return None, None, None, None, "Paired T-test failed"
 
+    differences = np.array(scores_1) - np.array(scores_2)
+    # For metrics where lower is better (like HD), invert the t_statistic
+    if not higher_better:
+        t_statistic = -t_statistic
+        differences = -differences
+
+    # Calculate differences regardless of significance
+    positive_differences = np.sum(differences > 0)
+    negative_differences = np.sum(differences < 0)
+    
+    # Determine better model only if difference is significant
     if p < p_value:
         if t_statistic > 0:
-            better_model = "OMASeg"
+            better_model = model_1
         elif t_statistic < 0:
-            better_model = "TotalSeg"
+            better_model = model_2
         else:
             better_model = "Unknown"
     else:
-        better_model = None
-        t_statistic = None
-    positive_differences = np.sum(np.array(scores_1) > np.array(scores_2))
-    negative_differences = np.sum(np.array(scores_1) < np.array(scores_2))
+        better_model = None  # No significant difference
     
     return t_statistic, p, positive_differences, negative_differences, better_model
-
-
-def statistical_test(data, column_names, csv_filename, significance_level=0.05):  # TODO: 
-    """
-    Perform paired 2-sided T-test on 3x models' evaluation scores, save results to a CSV file.
-
-    Parameters:
-    data: List of dataframes, list of dictionaries, or dict of dictionaries each containing scores for different models.
-    column_names: List of class names to perform tests on.
-    csv_filename: The path to the CSV file where results are saved.
-    significance_level: The significance level for statistical tests. Default is 0.05.
-
-    Returns:
-    - DataFrame with significant comparisons and p-values.
-    """
-    model_mapping = {1: 'GT', 2: 'Pseudo', 3: 'Shape'}
-
-    csv = pd.read_excel(csv_filename)
-    if 'Significant Comparisons' not in csv.columns:
-        csv['Significant Comparisons'] = pd.NA
-        csv['P-Values'] = pd.NA
-
-    if isinstance(data, dict) and all(isinstance(v, dict) for v in data.values()):
-        combined_data = pd.DataFrame()
-        for model_idx, (model_name, model_data) in enumerate(data.items()):
-            df = pd.DataFrame.from_dict(model_data, orient='index').transpose()
-            df.columns = pd.MultiIndex.from_product(
-                [[model_mapping[model_idx + 1]], df.columns])
-            combined_data = pd.concat([combined_data, df], axis=1)
-    else:
-        combined_data = pd.concat(
-            data, axis=1, keys=[model_mapping[i + 1] for i in range(len(data))])
-
-    for i, col in enumerate(column_names):
-        scores_dict = {}
-        columns_to_check = [(model_mapping[i+1], col)
-                            for i in range(len(data))]
-        clean_data = combined_data.dropna(subset=columns_to_check)
-        for idx in range(len(data)):
-            model_name = model_mapping[idx+1]
-            scores_dict[model_name] = clean_data[model_name].to_numpy()[:, i]
-
-        df = pd.DataFrame(scores_dict)
-
-        significant_pairs = set()
-        model_pairs = [('GT', 'Pseudo'), ('GT', 'Shape'), ('Pseudo', 'Shape')]
-        for model1, model2 in model_pairs:
-            t_stat, p_value = stats.ttest_rel(df[model1], df[model2])
-            if p_value < significance_level:
-                significant_pairs.add(((model1, model2), p_value))
-
-        if significant_pairs:
-            significant_comparisons = [
-                f"{pair[0][0]} vs {pair[0][1]}" for pair in significant_pairs]
-            p_values = [pair[1] for pair in significant_pairs]
-            csv.at[i, 'Significant Comparisons'] = significant_comparisons
-            csv.at[i, 'P-Values'] = p_values
-
-    return csv[['Significant Comparisons', 'P-Values']]
-
-
-def statistical_test_upgrade(data, column_names, csv_filename, significance_level=0.05): # TODO: 
-    """
-    Perform statistical tests on 3x models' evaluation scores, save results to a CSV file.
-
-    Parameters:
-    data: List of dataframes, list of dictionaries, or dict of dictionaries each containing scores for different models.
-    column_names: List of class names to perform tests on.
-    csv_filename: The path to the CSV file where results are saved.
-    significance_level: The significance level for statistical tests. Default is 0.05.
-
-    Description:
-    - The function performs the Shapiro-Wilk test for normality and Levene's test for equality of variances.
-    - Depending on the normality and variance results, it chooses between ANOVA, Welch's ANOVA, and Kruskal-Wallis test.
-    - For ANOVA and Welch's ANOVA, it uses Tukey's HSD for post-hoc comparisons.
-    - For the Kruskal-Wallis test, it uses Dunn's test for post-hoc comparisons.
-    - Significant comparisons and their p-values are saved to the specified CSV file.
-
-    Returns:
-    - DataFrame with significant comparisons and p-values.
-    """
-    model_mapping = {1: 'GT', 2: 'Pseudo', 3: 'Shape'}
-
-    csv = pd.read_excel(csv_filename)
-    if 'Significant Comparisons' not in csv.columns:
-        csv['Significant Comparisons'] = pd.NA
-        csv['P-Values'] = pd.NA
-    if 'Statistical Test Used' not in csv.columns:
-        csv['Statistical Test Used'] = pd.NA
-
-    if isinstance(data, dict) and all(isinstance(v, dict) for v in data.values()):
-        combined_data = pd.DataFrame()
-        for model_idx, (model_name, model_data) in enumerate(data.items()):
-            df = pd.DataFrame.from_dict(model_data, orient='index').transpose()
-            df.columns = pd.MultiIndex.from_product(
-                [[model_mapping[model_idx + 1]], df.columns])
-            combined_data = pd.concat([combined_data, df], axis=1)
-    else:
-        combined_data = pd.concat(
-            data, axis=1, keys=[model_mapping[i + 1] for i in range(len(data))])
-
-    for i, col in enumerate(column_names):
-        scores_dict = {}
-        columns_to_check = [(model_mapping[i+1], col)
-                            for i in range(len(data))]
-        clean_data = combined_data.dropna(subset=columns_to_check)
-        for idx in range(len(data)):
-            model_name = model_mapping[idx+1]
-            scores_dict[model_name] = clean_data[model_name].to_numpy()[:, i]
-
-        df = pd.DataFrame(scores_dict)
-        df_melted = df.melt(var_name='Model', value_name='Score')
-
-        # Shapiro-Wilk Test for Normality
-        normality = True
-        for model, subset in df_melted.groupby('Model'):
-            _, p = stats.shapiro(subset['Score'])
-            if p < significance_level:
-                normality = False  # if any model's results not passed noramlity test -> the entire results not sufficient in a valid normality
-
-        # Levene test for equality of variances
-        _, p_value_levene = stats.levene(
-            *[df[model] for model in scores_dict.keys()])
-
-        significant_pairs = set()
-        # Select an approriate statistical test
-        if normality:
-            if p_value_levene > significance_level:
-                # Use ANOVA
-                model = ols('Score ~ C(Model)', data=df_melted).fit()
-                anova_results = sm.stats.anova_lm(model, typ=2)
-                if anova_results['PR(>F)'].iloc[0] < significance_level:
-                    tukey_results = pairwise_tukeyhsd(
-                        endog=df_melted['Score'], groups=df_melted['Model'], alpha=significance_level)
-                    significant_pairs_tukey = {(tuple(sorted([pair[0], pair[1]])), pair[3])
-                                               for pair in tukey_results.summary().data[1:] if pair[-1]}
-                    significant_pairs.update(significant_pairs_tukey)
-                    csv.at[i, 'Statistical Test Used'] = 'ANOVA'
-            else:
-                # Use Welch's ANOVA
-                welch_results = stats.f_oneway(
-                    df['GT'], df['Pseudo'], df['Shape'])
-                if welch_results.pvalue < significance_level:
-                    tukey_results = pairwise_tukeyhsd(
-                        endog=df_melted['Score'], groups=df_melted['Model'], alpha=significance_level)
-                    significant_pairs_tukey = {(tuple(sorted([pair[0], pair[1]])), pair[3])
-                                               for pair in tukey_results.summary().data[1:] if pair[-1]}
-                    significant_pairs.update(significant_pairs_tukey)
-                    csv.at[i, 'Statistical Test Used'] = 'Welch ANOVA'
-        else:
-            # Use Kruskal-Wallis test
-            kruskal_result = stats.kruskal(df['GT'], df['Pseudo'], df['Shape'])
-            if kruskal_result.pvalue < significance_level:
-                dunn_results = posthoc_dunn(
-                    [df['GT'], df['Pseudo'], df['Shape']], p_adjust='bonferroni')
-                significant_pairs_dunn = {(tuple(sorted([model_mapping[row], model_mapping[col]])), dunn_results.iloc[i, j])
-                                          for i, row in enumerate(dunn_results.index)
-                                          for j, col in enumerate(dunn_results.columns)
-                                          if dunn_results.iloc[i, j] < significance_level}
-                significant_pairs.update(significant_pairs_dunn)
-                csv.at[i, 'Statistical Test Used'] = 'Kruskal-Wallis'
-
-        if significant_pairs:
-            significant_comparisons = [
-                f"{pair[0][0]} vs {pair[0][1]}" for pair in significant_pairs]
-            p_values = [pair[1] for pair in significant_pairs]
-            csv.at[i, 'Significant Comparisons'] = significant_comparisons
-            csv.at[i, 'P-Values'] = p_values
-
-    return csv[['Significant Comparisons', 'P-Values', 'Statistical Test Used']]
 
 def generate_boxplot(dataset, prefix, postfix, data, all_scores, experiment_to_name_dict, columns_names, output_directory):
     folder_plots = os.path.join(output_directory, 'plots')
