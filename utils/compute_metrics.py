@@ -11,7 +11,7 @@ import pickle
 from dataset_utils.datasets_labelmap import dataset2labelmap, dataset2labelmap_extra_test
 from dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
 from dataset_utils.mappings import replace_labelmap, map_labels, replacements, FULLY_ANNOTATED_DATASETS, TOL_MISSING_VOLLUME_PERCENTAGE
-from dataset_utils.postprocessing import Postprocessing, RecalculateAvgOrganVolume
+from dataset_utils.postprocessing_for_eval import PostprocessingMetric, RecalculateAvgOrganVolume
 from dataset_utils.select_files import select_labels, select_files_total_seg, select_labels_from_gt_data
 
 from utils.metrics import compute_max_HD_distance, save_metric, save_missing_structure_check
@@ -76,7 +76,7 @@ def compute_metrics_other(input_dir, output_folder, path_avg_organ_volume, split
     avg_organ_volume = recalculate_avg_organ_volume.recalculate()
 
     # Init missing-structure checks
-    postprocessing = Postprocessing(datasetname=dataset)
+    postprocessing = PostprocessingMetric(datasetname=dataset)
     count_FP = {}
     count_FN = {}
     count_FN_ignore = {}
@@ -496,7 +496,7 @@ def compute_metrics_from_extra_test_set(input_dir, output_folder, path_avg_organ
     avg_organ_volume = recalculate_avg_organ_volume.recalculate()
 
     # Init missing-structure checks
-    postprocessing = Postprocessing(datasetname=dataset)
+    postprocessing = PostprocessingMetric(datasetname=dataset)
     count_FP = {}
     count_FN = {}
     count_FN_ignore = {}
