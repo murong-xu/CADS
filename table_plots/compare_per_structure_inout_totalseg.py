@@ -4,7 +4,7 @@ import os
 import pickle
 from collections import defaultdict
 
-from table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, bootstrap_ci, wilcoxon_test, wilcoxon_test_median, paired_t_test
+from table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids, bootstrap_ci, wilcoxon_test, wilcoxon_test_median, paired_t_test
 from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed, totalseg_exclude_to_compare
 
 
@@ -107,6 +107,11 @@ for prefix in prefixes:
 
                     for column in matching_columns:
                         values = df[column].to_list()  # Drop NA later
+                        if datasetname == '0038_amos' and column == 'prostate':
+                            df_tmp = pd.read_excel(file)
+                            df_tmp = df_tmp[~df_tmp["ids"].isin(amos_uterus_ids)]
+                            df_tmp = filter_rows(df_tmp, splits=splits)
+                            values = df_tmp[column].to_list()
                         if structure_is_in_dist and 'in' in structure_values:
                             structure_values['in'][table_names[j]].extend(
                                 values)

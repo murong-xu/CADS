@@ -62,15 +62,11 @@ def get_task_id(structure):
 def compare_models_stat_test(model1_results, model2_results, model1_name, model2_name, stat_test_method='paired_t_test', p_value=0.05, higher_better=True):
     combined_results = []
 
-    for organ, scores in model1_results.items():
+    for organ, _ in model1_results.items():
         model1_scores = model1_results[organ]
         model2_scores = model2_results[organ]
 
-        original_length = len(model1_scores)
         aligned_model1, aligned_model2 = align_and_filter_scores(model1_scores, model2_scores)
-        new_length = len(aligned_model1)
-
-        removed_points = original_length - new_length
 
         if stat_test_method == 'wilcoxon_test_median':
             stat, p, pos_diff, neg_diff, better_model = wilcoxon_test_median(aligned_model1, aligned_model2, model1_name, model2_name, p_value=p_value, higher_better=higher_better)
@@ -83,10 +79,11 @@ def compare_models_stat_test(model1_results, model2_results, model1_name, model2
 
         combined_results.append({
             'Organ': organ,
-            f'{model1_name} mean±std': f"{np.mean(aligned_model1):.2f}±{np.std(aligned_model1):.2f}",
+            f'{model1_name} mean±std': f"{np.mean(aligned_model1):.4f}±{np.std(aligned_model1):.4f}",
             f'{model1_name} median': np.median(aligned_model1),
-            f'{model2_name} mean±std': f"{np.mean(aligned_model2):.2f}±{np.std(aligned_model2):.2f}",
+            f'{model2_name} mean±std': f"{np.mean(aligned_model2):.4f}±{np.std(aligned_model2):.4f}",
             f'{model2_name} median': np.median(aligned_model2),
+            'Statistic': stat,
             'p_value': p,
             'Positive Differences': pos_diff,
             'Negative Differences': neg_diff,
@@ -654,5 +651,8 @@ def generate_combined_plot(dataset, prefix, postfix, data, all_scores, experimen
 # Exclude results containing transitional vertebrae
 transitional_ids = ["sub-verse131_ct", "sub-verse530_ct", "sub-verse542_dir-iso_ct", "sub-verse565_dir-ax_ct", "sub-verse576_ct",
                     "sub-verse577_dir-ax_ct", "sub-verse588_ct", "sub-verse604_dir-iso_ct", "sub-verse607_dir-sag_ct", "sub-verse612_ct", "sub-verse810_dir-iso_ct"]
+
+# For calculating prostate in AMOS: exclude uterus cases
+amos_uterus_ids = ['amos_0004', 'amos_0035', 'amos_0064', 'amos_0109', 'amos_0149', 'amos_0158', 'amos_0171', 'amos_0215', 'amos_0237', 'amos_0299', 'amos_0336', 'amos_0395']
 
 totalseg_out_dist_structures = ['heart_myocardium', 'heart_atrium_left', 'heart_ventricle_left', 'heart_atrium_right', 'heart_ventricle_right', 'pulmonary_artery', 'face', 'larynx', 'OAR_Brainstem', 'OAR_Glnd_Submand_L', 'OAR_Glnd_Submand_R', 'OAR_OpticNrv_L', 'OAR_OpticNrv_R', 'OAR_Parotid_L', 'OAR_Parotid_R']
