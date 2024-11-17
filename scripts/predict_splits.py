@@ -61,6 +61,9 @@ def main():
     
     parser.add_argument('--preprocessing', action='store_true',
                         help='Set this flag to enable OMASeg preprocessing (reorient RAS, resampling 1.5, remove rotation and translation)', default=False)
+    
+    parser.add_argument('--postprocessing', action='store_true',
+                        help='Set this flag to enable OMASeg postprocessing', default=False)
 
     parser.add_argument("--save_all_combined_seg", action="store_true",
                         help="Save one multilabel segmentation file for all classes", default=False)
@@ -96,7 +99,7 @@ def main():
     test_images.sort()
 
     predict(test_images, args.output_folder, args.model_folder, args.task_id, folds=folds,
-            preprocess_omaseg=args.preprocessing, save_all_combined_seg=args.save_all_combined_seg,
+            preprocess_omaseg=args.preprocessing, postprocess_omaseg = args.postprocessing, save_all_combined_seg=args.save_all_combined_seg,
             snapshot=args.snapshot, save_separate_targets=args.save_targets,
             num_threads_preprocessing=args.nr_thr_preprocess, nr_threads_saving=args.nr_thr_saving, verbose=args.verbose)
 

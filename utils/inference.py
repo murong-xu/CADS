@@ -5,14 +5,13 @@ import time
 from pathlib import Path
 import numpy as np
 import nibabel as nib
-import nibabel.orientations as nio
-from scipy.ndimage.measurements import center_of_mass
 from functools import partial
 from p_tqdm import p_map
 from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
 
 from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps, except_labels_combine
+from dataset_utils.postprocessing import _do_outlier_postprocessing_groups, postprocess_seg, postprocess_head
 from utils.snapshot import generate_snapshot
 from utils.libs import time_it
 
@@ -55,20 +54,6 @@ def get_task_model_folder(task_id: int, model_folder: str):
 
     raise ValueError(
         f'task id {task_id} not found in model folder {model_folder}')
-
-
-def calc_centroids_by_index(msk, label_index, decimals=1, world=False):
-    msk_data = np.asanyarray(msk.dataobj, dtype=msk.dataobj.dtype)
-    axc = nio.aff2axcodes(msk.affine)
-    ctd_list = [axc]
-    msk_temp = np.zeros(msk_data.shape, dtype=bool)
-    msk_temp[msk_data == label_index] = True
-    ctr_mass = center_of_mass(msk_temp)
-    if world:
-        ctr_mass = msk.affine[:3, :3].dot(ctr_mass) + msk.affine[:3, 3]
-        ctr_mass = ctr_mass.tolist()
-    ctd_list = [int(x) for x in ctr_mass]
-    return ctd_list
 
 
 class nnUNetv2Predictor():
@@ -151,7 +136,7 @@ def save_targets_to_nifti(save_separate_targets, output_targets_dir, affine, lab
                   basename=patient_id, original_affine=affine), targets, num_cpus=nr_threads_saving)
 
 
-def predict(files_in, folder_out, model_folder, task_ids, folds='all', preprocess_omaseg=False, save_all_combined_seg=True, snapshot=True, save_separate_targets=False, num_threads_preprocessing=1, nr_threads_saving=6, verbose=False):
+def predict(files_in, folder_out, model_folder, task_ids, folds='all', preprocess_omaseg=False, postprocess_omaseg=False, save_all_combined_seg=True, snapshot=True, save_separate_targets=False, num_threads_preprocessing=1, nr_threads_saving=6, verbose=False):
     """
     Loop images and use nnUNetv2 models to predict. 
     """
@@ -184,7 +169,7 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
             # Reorient to RAS, resampling to 1.5, remove rotation and translation
             print('Preprocessing')
 
-        output_dir = os.path.join(folder_out, dataset_name, patient_id)
+        output_dir = os.path.join(folder_out, patient_id)
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
         if save_separate_targets:
@@ -197,47 +182,14 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
             file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
             models[task_id].predict(file_in, file_out)
 
-            if task_id in [557, 558]:
-                file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
-                if not os.path.exists(file_seg_brain_group):
-                    models[553].predict(file_in, file_seg_brain_group)
-
-                seg_brain_group = nib.load(file_seg_brain_group)
-                seg_brain_array = seg_brain_group.get_fdata()
-                original_affine = seg_brain_group.affine
-                h, w, d = np.shape(seg_brain_array)
-
-                brain_volume_thres = 2000
-                brain_volume = np.count_nonzero(seg_brain_array == 9)
-
-                if brain_volume < brain_volume_thres:
-                    print(f'File {patient_id}: Does not contain head part or field out of view. Skip the Brain and HaN OARs group prediction.')
-                    seg_skipped = np.zeros((h, w, d), dtype=np.uint8)
-                    seg_skipped = nib.Nifti1Image(seg_skipped, original_affine)
-                    nib.save(seg_skipped, file_out)
-                else:
-                    brain_ctd = calc_centroids_by_index(seg_brain_group, label_index=9)
-                    seg = nib.load(file_out).get_fdata()
-
-                    offset_h = 100
-                    offset_w = 100
-                    if task_id == 557:
-                        offset_d = 133
-                    elif task_id == 558:
-                        offset_d = 200
-
-                    hmin = max(brain_ctd[0] - offset_h, 0)
-                    hmax = min(brain_ctd[0] + offset_h, h)
-                    wmin = max(brain_ctd[1] - offset_w, 0)
-                    wmax = min(brain_ctd[1] + offset_w, w)
-                    dmin = max(brain_ctd[2] - offset_d, 0)
-                    dmax = min(brain_ctd[2] + offset_d, d)
-
-                    seg_cropped = np.zeros((h, w, d), dtype=np.uint8)
-                    seg_cropped[hmin:hmax, wmin:wmax,
-                                dmin:dmax] = seg[hmin:hmax, wmin:wmax, dmin:dmax]
-                    seg_cropped = nib.Nifti1Image(seg_cropped, original_affine)
-                    nib.save(seg_cropped, file_out)
+            if postprocess_omaseg:
+                if task_id in _do_outlier_postprocessing_groups:
+                    postprocess_seg(file_out, task_id, file_out)
+                if task_id in [557, 558]:
+                    file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
+                    if not os.path.exists(file_seg_brain_group):
+                        models[553].predict(file_in, file_seg_brain_group)
+                    postprocess_head(task_id, file_seg_brain_group, file_out)
 
         # Combine all classes into a single segmentation nii file
         if save_all_combined_seg:

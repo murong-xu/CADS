@@ -1,231 +1,261 @@
+from pathlib import Path
 import numpy as np
-from dataset_utils.mappings import replacements
+import nibabel as nib
+import nibabel.orientations as nio
+from scipy.ndimage.measurements import center_of_mass
+
+from TPTBox import NII, to_nii
+from TPTBox.logger import Print_Logger
+
+from dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
+
+_do_outlier_postprocessing_groups = [551, 553, 554, 556, 559]
+
+single_medium_organ = {"typ": "organ", "min": 1, "max": 1, "autofix": 1000}
+single_medium_vessel = {"typ": "vessel", "min": 1, "max": 1, "autofix": 1000}
+single_small_vessel = {"typ": "vessel", "min": 1, "max": 3, "autofix": 500}
+single_small_glands = {"typ": "vessel", "min": 1, "max": 1, "autofix": 10}
+single_large_muscle = {"typ": "muscle", "min": 1, "max": 1, "autofix": 1000}
+lung = {"typ": "lung", "min": 1, "max": 1, "autofix": 300}
+vertebra = {"typ": "lung", "min": 1, "max": 1, "autofix": 100}
+heart = vertebra
+complex_557 = {"typ": "lung", "min": 1, "max": None, "autofix": 10}
+
+labels_info = {
+    # 551
+    "spleen": single_medium_organ,
+    "kidney_right": single_medium_organ,
+    "kidney_left": single_medium_organ,
+    "gallbladder": {"typ": "organ", "min": 1, "max": 1, "autofix": 20},
+    "liver": {"typ": "organ", "min": 1, "max": 1, "autofix": 2200},
+    "stomach": {"typ": "digenstion", "min": 1, "max": 1, "autofix": 1000},
+    "aorta": {"typ": "vessel", "min": 1, "max": 1, "autofix": 1000},
+    "inferior_vena_cava": {"typ": "vessel", "min": 1, "max": 2, "autofix": 500},
+    # "portal_vein_and_splenic_vein": {"typ": "vessel", "min": 1, "max": None, "autofix": 0},  # this is quite fractionated -> do nothing here
+    "pancreas": {"typ": "digenstion", "min": 0, "max": 0, "autofix": 1000},
+    # "adrenal_gland_right": single_small_glands,
+    # "adrenal_gland_left": single_small_glands,
+    "lung_upper_lobe_left": lung,
+    "lung_lower_lobe_left": lung,
+    "lung_upper_lobe_right": lung,
+    "lung_middle_lobe_right": lung,
+    "lung_lower_lobe_right": lung,
+    # 553
+    "esophagus": {"typ": "digenstion", "min": 1, "max": 1, "autofix": 1000},
+    "trachea": {"typ": "lung", "min": 1, "max": 1, "autofix": 100},
+    "heart_myocardium": heart,
+    "heart_atrium_left": heart,
+    "heart_ventricle_left": heart,
+    "heart_atrium_right": heart,
+    "heart_ventricle_right": heart,
+    # "pulmonary_artery": {"typ": "vessel", "min": 2, "max": 2, "autofix": 50},
+    "brain": heart,
+    "iliac_artery_left": {"typ": "vessel", "min": 1, "max": 3, "autofix": 10},
+    "iliac_artery_right": {"typ": "vessel", "min": 1, "max": 3, "autofix": 10},
+    "iliac_vena_left": single_small_vessel,
+    "iliac_vena_right": single_small_vessel,
+    "small_bowel": {"typ": "organ", "min": 1, "max": None, "autofix": 150},
+    # "duodenum": {"typ": "digenstion", "min": 1, "max": 1, "autofix": 800},
+    "colon": {"typ": "organ", "min": 1, "max": None, "autofix": 100},
+    "urinary_bladder": {"typ": "organ", "min": 1, "max": 1, "autofix": 1500},
+    "face": {"typ": "organ", "min": 1, "max": None, "autofix": 100},
+    # 554
+    "humerus_left": {"typ": "bone", "min": 1, "max": 1, "autofix": 500},
+    "humerus_right": {"typ": "bone", "min": 1, "max": 1, "autofix": 500},
+    "scapula_left": {"typ": "bone", "min": 1, "max": 1, "autofix": 500},
+    "scapula_right": {"typ": "bone", "min": 1, "max": 1, "autofix": 500},
+    "clavicula_left": {"typ": "bone", "min": 1, "max": 1, "autofix": 1000},
+    "clavicula_right": {"typ": "bone", "min": 1, "max": 1, "autofix": 1000},
+    "femur_left": {"typ": "bone", "min": 1, "max": 1, "autofix": 1000},
+    "femur_right": {"typ": "bone", "min": 1, "max": 1, "autofix": 1000},
+    "hip_left": {"typ": "bone", "min": 1, "max": 1, "autofix": 1000},
+    "hip_right": {"typ": "bone", "min": 1, "max": 1, "autofix": 1000},
+    "sacrum": {"typ": "bone", "min": 1, "max": 1, "autofix": 1000},
+    "gluteus_maximus_left": single_large_muscle,
+    "gluteus_maximus_right": single_large_muscle,
+    "gluteus_medius_left": single_large_muscle,
+    "gluteus_medius_right": single_large_muscle,
+    "gluteus_minimus_left": single_large_muscle,
+    "gluteus_minimus_right": single_large_muscle,
+    "autochthon_left": single_large_muscle,
+    "autochthon_right": single_large_muscle,
+    "iliopsoas_left": single_large_muscle,
+    "iliopsoas_right": single_large_muscle,
+    # 556
+    "spinal_canal": {"typ": "cns", "min": 1, "max": 1, "autofix": 1000},
+    "larynx": {"typ": "organ", "min": 1, "max": 1, "autofix": 1000},
+    "heart": {"typ": "organ", "min": 1, "max": 1, "autofix": 1000},
+    "bowel_bag": {"typ": "device", "min": 1, "max": 1, "autofix": 1000},
+    "sigmoid": {"typ": "organ", "min": 1, "max": 1, "autofix": 1000},
+    "rectum": {"typ": "digenstion", "min": 1, "max": 1, "autofix": 1000},
+    # "prostate": {"typ": "organ", "min": 1, "max": 1, "autofix": 3600},
+    # "seminal_vesicle": {"typ": "digenstion", "min": 2, "max": 2, "autofix": 0},
+    "left_mammary_gland": {"typ": "organ", "min": 1, "max": 1, "max_cc": 1, "autofix": 0, "fill": True, "convex_hull": 0},
+    "right_mammary_gland": {"typ": "organ", "min": 1, "max": 1, "max_cc": 1, "autofix": 0, "fill": True, "convex_hull": 0},
+    "sternum": {"typ": "bone", "min": 1, "max": 1, "max_cc": 1, "autofix": 1500},
+    "right psoas major": single_large_muscle,
+    "left psoas major": single_large_muscle,
+    "right rectus abdominis": single_large_muscle,
+    "left rectus abdominis": single_large_muscle,
+    # 557
+    # "white matter": complex_557,
+    # "gray matter": complex_557,
+    # "csf": complex_557,  # {"typ": "organ", "min": 1, "max": None, "autofix": 0},
+    # "scalp": {"typ": "organ", "min": 1, "max": 1, "autofix": 4000},
+    # "eye balls": complex_557,
+    # "compact bone": complex_557,
+    # "spongy bone": complex_557,
+    # "blood": complex_557,
+    # "head muscles": complex_557,
+    # 558
+    # "common_carotid_artery_right": single_medium_vessel,  # do nothing with 558
+    # "common_carotid_artery_left": single_medium_vessel,  # do nothing with 558
+    # "thyroid_gland": {"typ": "organ", "min": 2, "max": 2, "autofix": 1000},  # TODO: do nothing with 558
+    # 559
+    "subcutaneous_tissue": {"typ": "rest", "min": 1, "max": 1000, "autofix": 4000},
+    "muscle": {"typ": "rest", "min": 1, "max": 1000, "autofix": 4000},
+    "abdominal_cavity": {"typ": "rest", "min": 1, "max": 1000, "max_cc": 1, "autofix": 200},
+    # "thoracic_cavity": {"typ": "rest", "min": 1, "max": 1000, "autofix": 1500},
+    "pericardium": {"typ": "rest", "min": 1, "max": 1, "max_cc": 1, "autofix": 1000},
+    "bones": {"typ": "rest", "min": 1, "max": 1000, "autofix": 200},
+    "spinal_cord": {"typ": "cns", "min": 1, "max": 1, "autofix": 500},
+    # others
+    "unused": {"typ": "digenstion", "min": 1, "max": 1, "autofix": 1000},
+}
 
 
-def remove_no_label_slides_gt(gt_array):
+def postprocess_seg(seg_path: Path | str | NII, task_id: int, out_path: Path | str | None = None, aggressiveness=1, verbose=False):
+    nii = to_nii(seg_path, True)
+    logger = Print_Logger()
+    for idx, key in map_taskid_to_labelmaps[task_id].items():
+        if idx == 0:
+            continue
+        if key not in labels_info:
+            logger.on_warning(f"{key=} is not set up in the info file")
+            continue
+        info = labels_info[key]
+        logger.on_neutral(key)
+        if info.get("fill", False):
+            logger.on_neutral("Fill holes")
+            nii = (
+                nii.fill_holes_(idx)
+                .fill_holes_(idx, nii.get_axis("S"))
+                .fill_holes_(idx, nii.get_axis("R"))
+                .fill_holes_(idx, nii.get_axis("A"))
+                .fill_holes_(idx)
+            )
+        nii = filter_connected_components(
+            nii, idx, min_volume=info.get("autofix", 0) * aggressiveness, max_count_component=info.get("max_cc", None), verbose=verbose
+        )
+        if info.get("convex_hull", 0) != 0:
+            nii2 = nii.extract_label(idx).erode_msk_(
+                info.get("convex_hull", 0)).calc_convex_hull_("S")
+            nii[nii2 != 0] = nii2[nii2 != 0] * idx
+
+    if out_path is not None:
+        nii.save(out_path)
+    print(f'Postprocessed group {task_id}')
+
+
+def filter_connected_components(
+    self: NII,
+    labels: int | list[int] | None,
+    min_volume: int | None = None,
+    max_volume: int | None = None,
+    max_count_component=None,
+    connectivity: int = 3,
+    removed_to_label=0,
+    inplace=False,
+    verbose=True,
+):
     """
-    For evaluation on Saros: should use the real GT annotations (discontinuous). Remove the un-annotated label slices. 
+    Filter connected components in a segmentation array based on specified volume constraints.
+
+    Parameters:
+    labels (int | list[int]): The labels of the components to filter.
+    min_volume (int | None): Minimum volume for a component to be retained. Components smaller than this will be removed.
+    max_volume (int | None): Maximum volume for a component to be retained. Components larger than this will be removed.
+    max_count_component (int | None): Maximum number of components to retain. Once this limit is reached, remaining components will be removed.
+    connectivity (int): Connectivity criterion for defining connected components (default is 3).
+    removed_to_label (int): Label to assign to removed components (default is 0).
+
+    Returns:
+    None
     """
-    _, _, d = np.shape(gt_array)
-    # Finding slices along the third dimension where all values are 255
-    slices_with_all_255 = [i for i in range(
-        d) if np.all(gt_array[:, :, i] == 255)]
-    filtered_gt = np.delete(gt_array, slices_with_all_255, axis=2)
-    return filtered_gt, slices_with_all_255
+    arr = self.get_seg_array()
+    nii = self.get_largest_k_segmentation_connected_components(
+        None, labels, connectivity=connectivity, return_original_labels=False)
+    idxs = nii.unique()
+    for k, idx in enumerate(idxs, start=1):
+        msk = nii.extract_label(idx)
+        nii *= -msk + 1
+        s = msk.sum()
+        if max_count_component is not None and k > max_count_component:  # for mammary glands and sternum
+            print("Remove additional components", "n =",
+                  idxs[-1] - k, "/", idxs[-1]) if verbose else None
+            arr[msk.get_array() != 0] = removed_to_label
+            arr[nii.get_array() != 0] = removed_to_label  # set all future to 0
+            break
+        if min_volume is not None and s < min_volume:
+            print(
+                f"Remove components that are to small; n = {idxs[-1] - k+1} with {s} or smaller < {min_volume=}") if verbose else None
+            arr[msk.get_array() != 0] = removed_to_label
+            arr[nii.get_array() != 0] = removed_to_label  # set all future to 0
+            break
+        if max_volume is not None and s > max_volume:
+            arr[msk.get_array() == 1] = removed_to_label
+    return self.set_array(arr, inplace)
 
 
-def remove_no_label_slides_pred(pred_array, slices_with_all_255):
-    """
-    For evaluation on Saros: should use the real GT annotations (discontinuous). Remove the un-annotated label slices. 
-    """
-    filtered_pred = np.delete(pred_array, slices_with_all_255, axis=2)
-    return filtered_pred
+def calc_centroids_by_index(msk, label_index, decimals=1, world=False):
+    msk_data = np.asanyarray(msk.dataobj, dtype=msk.dataobj.dtype)
+    axc = nio.aff2axcodes(msk.affine)
+    ctd_list = [axc]
+    msk_temp = np.zeros(msk_data.shape, dtype=bool)
+    msk_temp[msk_data == label_index] = True
+    ctr_mass = center_of_mass(msk_temp)
+    if world:
+        ctr_mass = msk.affine[:3, :3].dot(ctr_mass) + msk.affine[:3, 3]
+        ctr_mass = ctr_mass.tolist()
+    ctd_list = [int(x) for x in ctr_mass]
+    return ctd_list
 
 
-class Postprocessing():
-    """
-    gt: taken from datasets (having GTs)
-    pseudo: prediction maps 551-559
-    """
+def postprocess_head(task_id, file_seg_brain_group, file_out):
+    seg_brain_group = nib.load(file_seg_brain_group)
+    seg_brain_array = seg_brain_group.get_fdata()
+    original_affine = seg_brain_group.affine
+    h, w, d = np.shape(seg_brain_array)
 
-    def __init__(self, datasetname: str):
-        self.dataset = datasetname
-        if self.dataset == "0001_visceral_gc" or self.dataset == "0002_visceral_sc":
-            self._postprocess = self._postprocess_visceral
-            self.process_gt = self._skip_gt
-            self.process_pseudo = self._process_pesudo
-        elif self.dataset == "0003_kits21":
-            self._postprocess = self._postprocess_kits21
-            self.process_gt = self._process_gt
-            self.process_pseudo = self._process_pseudo_kits21
-        elif self.dataset == "0004_lits":
-            self._postprocess = self._postprocess_lits
-            self.process_gt = self._process_gt
-            self.process_pseudo = self._skip_pseudo
-        elif self.dataset == "0008_ctorg":
-            self._postprocess = self._postprocess_ctorg
-            self.process_gt = self._skip_gt
-            self.process_pseudo = self._process_pesudo
-        elif self.dataset == "0009_abdomenct1k":
-            self._postprocess = self._postprocess_abdomenct1k
-            self.process_gt = self._skip_gt
-            self.process_pseudo = self._process_pesudo
-        elif self.dataset == "0034_empire":
-            self._postprocess = self._postprocess_empire
-            self.process_gt = self._skip_gt
-            self.process_pseudo = self._process_pesudo
-        elif self.dataset == "0040_saros":
-            self.process_gt = self._process_gt_saros
-            self.process_pseudo = self._process_pseudo_saros
-        else:
-            print("No postprocessing for this dataset needs to be done.")
-            self.process_pseudo = self._skip_pseudo
-            self.process_gt = self._skip_gt
+    brain_volume_thres = 2000
+    brain_volume = np.count_nonzero(seg_brain_array == 9)
 
-    def _skip_pseudo(self, part, labelmap, label):
-        return labelmap, label
+    if brain_volume < brain_volume_thres:
+        print(f'Current file does not contain head part or field out of view. Skip the Brain and HaN OARs group prediction.')
+        seg_skipped = np.zeros((h, w, d), dtype=np.uint8)
+        seg_skipped = nib.Nifti1Image(seg_skipped, original_affine)
+        nib.save(seg_skipped, file_out)
+    else:
+        brain_ctd = calc_centroids_by_index(seg_brain_group, label_index=9)
+        seg = nib.load(file_out).get_fdata()
 
-    def _skip_gt(self, labelmap, label):
-        return labelmap, label
+        offset_h = 100
+        offset_w = 100
+        if task_id == 557:
+            offset_d = 133
+        elif task_id == 558:
+            offset_d = 200
 
-    def _process_pesudo(self, part, labelmap, label):
-        labelmap_copy = dict(labelmap)
-        if part == 551:
-            labelmap_copy, label = self._postprocess(labelmap_copy, label)
-        return labelmap_copy, label
+        hmin = max(brain_ctd[0] - offset_h, 0)
+        hmax = min(brain_ctd[0] + offset_h, h)
+        wmin = max(brain_ctd[1] - offset_w, 0)
+        wmax = min(brain_ctd[1] + offset_w, w)
+        dmin = max(brain_ctd[2] - offset_d, 0)
+        dmax = min(brain_ctd[2] + offset_d, d)
 
-    def _process_gt(self, labelmap, label):
-        labelmap_copy = dict(labelmap)
-        labelmap_copy, label = self._postprocess(labelmap_copy, label)
-        return labelmap_copy, label
-
-    def _postprocess_visceral(self, pseudo_labelmap, pseudo):
-        """
-        pseudo: merge 15+16+17 (right lobes)  -> right lung, merge 13+14 (left lobes)-> left lung
-        """
-        del pseudo_labelmap[13]
-        del pseudo_labelmap[14]
-        del pseudo_labelmap[15]
-        del pseudo_labelmap[16]
-        del pseudo_labelmap[17]
-        pseudo_labelmap[13] = "left lung"
-        pseudo_labelmap[14] = "right lung"
-        pseudo[pseudo == 13] = 13
-        pseudo[pseudo == 14] = 13
-        pseudo[pseudo == 15] = 14
-        pseudo[pseudo == 16] = 14
-        pseudo[pseudo == 17] = 14
-        return pseudo_labelmap, pseudo
-
-    def _postprocess_kits21(self, gt_labelmap, gt):
-        """
-        gt: merge lesion(2) & cyst(3) to kidney(1)
-        """
-        del gt_labelmap[2]
-        del gt_labelmap[3]
-        gt[gt == 2] = 1
-        gt[gt == 3] = 1
-        return gt_labelmap, gt
-
-    def _process_pseudo_kits21(self, part, pseudo_labelmap, pseudo):
-        """
-        pesudo: merge 2+3->kidney
-        """
-        pseudo_labelmap_copy = dict(pseudo_labelmap)
-        if part == 551:
-            del pseudo_labelmap_copy[2]
-            del pseudo_labelmap_copy[3]
-            pseudo_labelmap_copy[2] = "kidney"
-            pseudo[pseudo == 2] = 2
-            pseudo[pseudo == 3] = 2
-        return pseudo_labelmap_copy, pseudo
-
-    def _process_pseudo_saros(self, part, pseudo_labelmap, pseudo):
-        """
-        Remove slices with no annotations.
-        """
-        if part in [553, 559]:
-            pseudo = remove_no_label_slides_pred(
-                pseudo, self.slices_with_all_255)
-        return pseudo_labelmap, pseudo
-
-    def _process_gt_saros(self, gt_labelmap, gt):
-        """
-        Remove "nolabel" in Saros GT labelmap.
-        Remove slices with no annotations.
-        """
-        gt_labelmap_copy = dict(gt_labelmap)
-        # del gt_labelmap_copy[255]  # after removing axal slices with 255s, the remaining ones still can contain 255 labels
-
-        gt, self.slices_with_all_255 = remove_no_label_slides_gt(gt)
-
-        return gt_labelmap_copy, gt
-
-    def _postprocess_lits(self, gt_labelmap, gt):
-        """
-        gt: merge lesion(2) to liver(1)
-        """
-        del gt_labelmap[2]
-        gt[gt == 2] = 1
-        return gt_labelmap, gt
-
-    def _postprocess_ctorg(self, pseudo_labelmap, pseudo):
-        """
-        pesudo: merge 13+14+15+16+17 (lung lobes)->lungs, merge 2+3->kidneys
-        """
-        del pseudo_labelmap[13]
-        del pseudo_labelmap[14]
-        del pseudo_labelmap[15]
-        del pseudo_labelmap[16]
-        del pseudo_labelmap[17]
-        pseudo_labelmap[13] = "lungs"
-        pseudo[pseudo == 13] = 13
-        pseudo[pseudo == 14] = 13
-        pseudo[pseudo == 15] = 13
-        pseudo[pseudo == 16] = 13
-        pseudo[pseudo == 17] = 13
-        del pseudo_labelmap[2]
-        del pseudo_labelmap[3]
-        pseudo_labelmap[2] = "kidneys"
-        pseudo[pseudo == 2] = 2
-        pseudo[pseudo == 3] = 2
-        return pseudo_labelmap, pseudo
-
-    def _postprocess_abdomenct1k(self, pseudo_labelmap, pseudo):
-        """
-        pseudo: merge 2+3->kidney
-        """
-        del pseudo_labelmap[2]
-        del pseudo_labelmap[3]
-        pseudo_labelmap[2] = "kidney"
-        pseudo[pseudo == 2] = 2
-        pseudo[pseudo == 3] = 2
-        return pseudo_labelmap, pseudo
-
-    def _postprocess_empire(self, pseudo_labelmap, pseudo):
-        """
-        pseudo: merge 13+14+15+16+17 (lung lobes)->lungs
-        """
-        del pseudo_labelmap[13]
-        del pseudo_labelmap[14]
-        del pseudo_labelmap[15]
-        del pseudo_labelmap[16]
-        del pseudo_labelmap[17]
-        pseudo_labelmap[13] = "lungs"
-        pseudo[pseudo == 13] = 13
-        pseudo[pseudo == 14] = 13
-        pseudo[pseudo == 15] = 13
-        pseudo[pseudo == 16] = 13
-        pseudo[pseudo == 17] = 13
-        return pseudo_labelmap, pseudo
-
-
-class RecalculateAvgOrganVolume():
-    """
-    gt: taken from datasets (having GTs)
-    Goal: to be able to used in combination with our models 551-559's available targets
-    """
-
-    def __init__(self, avg_volume: dict, tolerance: float):
-        self.replacements = replacements
-        self.avg_volume = avg_volume
-        self.avg_volume_new = dict(self.avg_volume)
-        self.tolerance = tolerance
-        self.recalculate = self._recalculate
-
-    def _replace_labelname(self):
-        for part in self.avg_volume_new.keys():
-            volume_dict = self.avg_volume_new[part]
-            for k, _ in list(volume_dict.items()):
-                self.avg_volume_new[part][self.replacements.get(
-                    k, k)] = self.avg_volume_new[part].pop(k)
-
-    def _set_tolerance(self):
-        for part in self.avg_volume_new.keys():
-            self.avg_volume_new[part].update((key, round(
-                value * self.tolerance)) for key, value in self.avg_volume_new[part].items())
-
-    def _recalculate(self):
-        self._replace_labelname()
-        self._set_tolerance()
-        return self.avg_volume_new
+        seg_cropped = np.zeros((h, w, d), dtype=np.uint8)
+        seg_cropped[hmin:hmax, wmin:wmax,
+                    dmin:dmax] = seg[hmin:hmax, wmin:wmax, dmin:dmax]
+        seg_cropped = nib.Nifti1Image(seg_cropped, original_affine)
+        nib.save(seg_cropped, file_out)
+        print(f'Postprocessed group {task_id}')
