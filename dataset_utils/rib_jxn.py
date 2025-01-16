@@ -12,17 +12,16 @@ def save_nifti(data, affine, header, output_dataset_folder, name):
     nib.save(final_nifti, output_file)
 
 def main():
-    output_dir = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/debug/rib_jxn/out/smaller10'
-    pred_dir = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/debug/rib_jxn/raw_seg'
-    fm_dir = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/debug/rib_jxn/vessels'
+    output_dir = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/totalseg_gt_correction/rib_jxn/w_CLAHE/test'
+    pred_dir = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/totalseg_gt_correction/labelata/test_split_to_labelata'
+    fm_dir = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/totalseg_gt_correction/vesselFM/tubularsam_w_CLAHE_corrected/test'
     cases = glob.glob(pred_dir + '/*')
     cases.sort()
-    # cases = [cases[1]]
 
     for case in cases:
         img_id = case.split('/')[-1]
         file_seg_raw = os.path.join(case, f'{img_id}_part_255.nii.gz')
-        file_fm = os.path.join(fm_dir, f'{img_id}_pred.nii.gz')
+        file_fm = os.path.join(fm_dir, f'{img_id}_0000_vesselFM.nii.gz')
         file_spine = os.path.join(case, f'{img_id}_part_252.nii.gz')
         output_dataset_folder = os.path.join(output_dir, img_id)
         os.makedirs(output_dataset_folder, exist_ok=True)
@@ -107,7 +106,7 @@ def main():
                 completed_rib_seg[junction_component] = closest_rib_class
                 print(f'Merge {size} voxels from cc index {component_index} to rib {closest_rib_class}, distance {min_distance}')
 
-        final_nifti = nib.Nifti1Image(completed_rib_seg.astype(np.uint8), seg_raw.affine, seg_raw.header)
+        final_nifti = nib.Nifti1Image(completed_rib_seg.astype(np.uint8), seg_fm.affine, seg_fm.header)
         output_file = os.path.join(output_dataset_folder, f"{img_id}_with_jxn.nii.gz")
         nib.save(final_nifti, output_file)
 
