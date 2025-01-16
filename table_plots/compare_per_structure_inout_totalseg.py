@@ -10,11 +10,11 @@ from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_a
 
 # TODO: param
 output_folder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/compare_totalseg_omaseg'
-analysis_name = '1000_raw_vs_roirobust'
+analysis_name = '1000_post_vs_roirobust'
 stat_name = 'paired_t_test'
 
 experiment_results_path = {
-    'omaseg': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/final_models/scores_dependency/test_0',
+    'omaseg': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/final_models/scores_postprocessed/test_0',
     'totalsegmentator': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
 }
 

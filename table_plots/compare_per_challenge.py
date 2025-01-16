@@ -10,11 +10,11 @@ experiment_to_name_dict = {
     'totalsegmentator': 'TotalSeg',
 }
 experiment_results_path = {
-    'omaseg': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/final_models/scores_dependency/test_0',
+    'omaseg': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/final_models/scores_postprocessed/test_0',
     'totalsegmentator': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
 }
 output_folder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/compare_totalseg_omaseg/per-challenge'
-analysis_name = '1000_raw_vs_roirobust'
+analysis_name = '1000_post_vs_roirobust'
 
 datasets_eval = [
     '0001_visceral_gc',
