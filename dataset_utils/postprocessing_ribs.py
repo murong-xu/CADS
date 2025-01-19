@@ -126,9 +126,9 @@ def main():
         filtered_components = [(index, size) for index, size in enumerate(component_sizes, start=1) if 100 < size < 1500]  # TODO: 
         sorted_components = sorted(enumerate(filtered_components, start=1), key=lambda x: x[1], reverse=True)
 
-        relabeled_components = np.zeros_like(labeled_junctions)
-        for new_label, (_, (component_index, _)) in enumerate(sorted_components, start=1):
-            relabeled_components[labeled_junctions == component_index] = new_label
+        # relabeled_components = np.zeros_like(labeled_junctions)
+        # for new_label, (_, (component_index, _)) in enumerate(sorted_components, start=1):
+        #     relabeled_components[labeled_junctions == component_index] = new_label
         # save_nifti(relabeled_components, seg.affine, seg.header, output_seg_folder, 'jxn_candidates_size_filtered.nii.gz')
         
         # Initialize completed rib segmentation
