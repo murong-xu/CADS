@@ -221,6 +221,67 @@ def calc_centroids_by_index(msk, label_index, decimals=1, world=False):
     return ctd_list
 
 
+def postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out):
+    seg_brain_group = nib.load(file_seg_brain_group)
+    seg_brain_array = seg_brain_group.get_fdata()
+    original_affine = seg_brain_group.affine
+    h, w, d = np.shape(seg_brain_array)
+
+    brain_volume_thres = 2000
+    brain_volume = np.count_nonzero(seg_brain_array == 9)
+    has_brain = brain_volume >= brain_volume_thres
+
+    # Load cervical vertebrae segmentation (classes 15-24)
+    seg_vertebrae_group = nib.load(file_seg_vertebrae_group)
+    seg_vertebrae_array = seg_vertebrae_group.get_fdata()
+    vertebrae_mask = np.zeros_like(seg_vertebrae_array, dtype=bool)
+    for vertebrae_class in range(14, 25):
+        vertebrae_mask |= seg_vertebrae_array == vertebrae_class
+    has_neck = np.any(vertebrae_mask)
+
+    if has_brain:
+        # Case 1: Brain exists - use brain-centered bounding box
+        brain_ctd = calc_centroids_by_index(seg_brain_group, label_index=9)
+        seg = nib.load(file_out).get_fdata()
+
+        offset_h = 100
+        offset_w = 100
+        offset_d = 200
+
+        hmin = max(brain_ctd[0] - offset_h, 0)
+        hmax = min(brain_ctd[0] + offset_h, h)
+        wmin = max(brain_ctd[1] - offset_w, 0)
+        wmax = min(brain_ctd[1] + offset_w, w)
+        dmin = max(brain_ctd[2] - offset_d, 0)
+        dmax = min(brain_ctd[2] + offset_d, d)
+
+    elif has_neck:
+        # Case 2: No brain but cervical vertebrae exist - use inferior vertebrae as lower boundary
+        seg = nib.load(file_out).get_fdata()
+        vertebrae_z_coords = np.where(np.any(vertebrae_mask, axis=(0, 1)))[0]
+        inferior_vertebrae_z = vertebrae_z_coords.min()  # Most inferior point of cervical vertebrae
+
+        # Create bounding box from inferior lung boundary to top of image
+        hmin, hmax = 0, h
+        wmin, wmax = 0, w
+        dmin, dmax = inferior_vertebrae_z, d  # TODO: 
+
+    else:
+        # Case 3: Neither brain nor neck exist - skip processing
+        print('Current file contains neither head nor neck. Skip the neck structures prediction.')
+        seg_skipped = np.zeros((h, w, d), dtype=np.uint8)
+        seg_skipped = nib.Nifti1Image(seg_skipped, original_affine)
+        nib.save(seg_skipped, file_out)
+        return
+
+    # Apply the determined bounding box
+    seg_cropped = np.zeros((h, w, d), dtype=np.uint8)
+    seg_cropped[hmin:hmax, wmin:wmax, dmin:dmax] = seg[hmin:hmax, wmin:wmax, dmin:dmax]
+    seg_cropped = nib.Nifti1Image(seg_cropped, original_affine)
+    nib.save(seg_cropped, file_out)
+    print(f'Postprocessed group {task_id}')
+
+
 def postprocess_head(task_id, file_seg_brain_group, file_out):
     seg_brain_group = nib.load(file_seg_brain_group)
     seg_brain_array = seg_brain_group.get_fdata()
@@ -231,7 +292,7 @@ def postprocess_head(task_id, file_seg_brain_group, file_out):
     brain_volume = np.count_nonzero(seg_brain_array == 9)
 
     if brain_volume < brain_volume_thres:
-        print(f'Current file does not contain head part or field out of view. Skip the Brain and HaN OARs group prediction.')
+        print(f'Current file does not contain head part or field out of view. Skip the Brain group prediction.')
         seg_skipped = np.zeros((h, w, d), dtype=np.uint8)
         seg_skipped = nib.Nifti1Image(seg_skipped, original_affine)
         nib.save(seg_skipped, file_out)
@@ -241,10 +302,7 @@ def postprocess_head(task_id, file_seg_brain_group, file_out):
 
         offset_h = 100
         offset_w = 100
-        if task_id == 557:
-            offset_d = 133
-        elif task_id == 558:
-            offset_d = 200
+        offset_d = 133
 
         hmin = max(brain_ctd[0] - offset_h, 0)
         hmax = min(brain_ctd[0] + offset_h, h)

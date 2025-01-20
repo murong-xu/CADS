@@ -11,7 +11,7 @@ from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
 
 from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps, except_labels_combine
-from dataset_utils.postprocessing import _do_outlier_postprocessing_groups, postprocess_seg, postprocess_head
+from dataset_utils.postprocessing import _do_outlier_postprocessing_groups, postprocess_seg, postprocess_head, postprocess_head_and_neck
 from utils.snapshot import generate_snapshot
 from utils.libs import time_it
 
@@ -68,7 +68,7 @@ class nnUNetv2Predictor():
         self.device = device
 
         # Use default settings recommended by nnUNet (also same as TotalSeg_v2)
-        self.predictor = nnUNetPredictor(tile_step_size=0.5,
+        self.predictor = nnUNetPredictor(tile_step_size=0.5,  # TODO: 0.5, 0.8
                                          use_gaussian=True,
                                          use_mirroring=False,
                                          perform_everything_on_device=True,
@@ -89,7 +89,8 @@ class nnUNetv2Predictor():
         if batch_predict:
             self.predict = self._nnUNetv2_batch_predict
         else:
-            self.predict = self._nnUNetv2_predict
+            self.predict = self._nnUNetv2_predict # TODO:
+            # self.predict = self.predict_from_files
 
     @time_it
     def _nnUNetv2_batch_predict(self, folder_in, folder_out):
@@ -153,6 +154,12 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
     for task_id in task_ids:
         models[task_id] = nnUNetv2Predictor(model_folder, task_id, device, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth',
                                             num_threads_preprocessing=num_threads_preprocessing, num_threads_nifti_save=nr_threads_saving, verbose=verbose)
+    if any(task in task_ids for task in [557, 558]) and 553 not in task_ids:
+        models[553] = nnUNetv2Predictor(model_folder, 553, device, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth',
+                                            num_threads_preprocessing=num_threads_preprocessing, num_threads_nifti_save=nr_threads_saving, verbose=verbose)
+    if 558 in task_ids and 552 not in task_ids:
+        models[552] = nnUNetv2Predictor(model_folder, 552, device, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth',
+                                            num_threads_preprocessing=num_threads_preprocessing, num_threads_nifti_save=nr_threads_saving, verbose=verbose)
 
     # Loop images
     for i, file_in in enumerate(files_in):
@@ -178,9 +185,16 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
                 os.makedirs(output_targets_dir, exist_ok=True)
 
         # Inference and save segmentations: loop 9x models
+        task_ids.sort()
         for task_id in task_ids:
             file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
-            models[task_id].predict(file_in, file_out)
+            models[task_id].predict(file_in, file_out)  # TODO:
+            # models[task_id].predict(file_in, file_out,
+            #                      save_probabilities=False, 
+            #                      overwrite=True,
+            #                      num_processes_preprocessing=4, num_processes_segmentation_export=1,
+            #                      folder_with_segs_from_prev_stage=None,
+            #                      num_parts=1, part_id=0)
 
             if postprocess_omaseg:
                 if task_id in _do_outlier_postprocessing_groups:
@@ -189,7 +203,15 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
                     file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
                     if not os.path.exists(file_seg_brain_group):
                         models[553].predict(file_in, file_seg_brain_group)
-                    postprocess_head(task_id, file_seg_brain_group, file_out)
+
+                    # For group 558, also need cervical vertebrae as reference
+                    if task_id == 558:
+                        file_seg_vertebrae_group = os.path.join(output_dir, patient_id+'_part_'+str(552)+'.nii.gz')
+                        if not os.path.exists(file_seg_vertebrae_group):
+                            models[552].predict(file_in, file_seg_vertebrae_group)
+                        postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
+                    else:
+                        postprocess_head(task_id, file_seg_brain_group, file_out)
 
         # Combine all classes into a single segmentation nii file
         if save_all_combined_seg:
