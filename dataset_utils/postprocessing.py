@@ -231,14 +231,6 @@ def postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_
     brain_volume = np.count_nonzero(seg_brain_array == 9)
     has_brain = brain_volume >= brain_volume_thres
 
-    # Load cervical vertebrae segmentation (classes 15-24)
-    seg_vertebrae_group = nib.load(file_seg_vertebrae_group)
-    seg_vertebrae_array = seg_vertebrae_group.get_fdata()
-    vertebrae_mask = np.zeros_like(seg_vertebrae_array, dtype=bool)
-    for vertebrae_class in range(14, 25):
-        vertebrae_mask |= seg_vertebrae_array == vertebrae_class
-    has_neck = np.any(vertebrae_mask)
-
     if has_brain:
         # Case 1: Brain exists - use brain-centered bounding box
         brain_ctd = calc_centroids_by_index(seg_brain_group, label_index=9)
@@ -255,7 +247,27 @@ def postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_
         dmin = max(brain_ctd[2] - offset_d, 0)
         dmax = min(brain_ctd[2] + offset_d, d)
 
-    elif has_neck:
+        # Apply the bounding box
+        seg_cropped = np.zeros((h, w, d), dtype=np.uint8)
+        seg_cropped[hmin:hmax, wmin:wmax, dmin:dmax] = seg[hmin:hmax, wmin:wmax, dmin:dmax]
+        seg_cropped = nib.Nifti1Image(seg_cropped, original_affine)
+        nib.save(seg_cropped, file_out)
+        print(f'Postprocessed group {task_id} using brain')
+        return True
+
+    # Only load vertebrae if brain check failed and vertebrae file is provided
+    if file_seg_vertebrae_group is None:
+        return False
+        
+    # Load cervical vertebrae segmentation (classes 14-24)
+    seg_vertebrae_group = nib.load(file_seg_vertebrae_group)
+    seg_vertebrae_array = seg_vertebrae_group.get_fdata()
+    vertebrae_mask = np.zeros_like(seg_vertebrae_array, dtype=bool)
+    for vertebrae_class in range(14, 25):
+        vertebrae_mask |= seg_vertebrae_array == vertebrae_class
+    has_neck = np.any(vertebrae_mask)
+
+    if has_neck:
         # Case 2: No brain but cervical vertebrae exist - use inferior vertebrae as lower boundary
         seg = nib.load(file_out).get_fdata()
         vertebrae_z_coords = np.where(np.any(vertebrae_mask, axis=(0, 1)))[0]
@@ -264,7 +276,15 @@ def postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_
         # Create bounding box from inferior lung boundary to top of image
         hmin, hmax = 0, h
         wmin, wmax = 0, w
-        dmin, dmax = inferior_vertebrae_z, d  # TODO: 
+        dmin, dmax = inferior_vertebrae_z, d
+
+        # Apply the determined bounding box
+        seg_cropped = np.zeros((h, w, d), dtype=np.uint8)
+        seg_cropped[hmin:hmax, wmin:wmax, dmin:dmax] = seg[hmin:hmax, wmin:wmax, dmin:dmax]
+        seg_cropped = nib.Nifti1Image(seg_cropped, original_affine)
+        nib.save(seg_cropped, file_out)
+        print(f'Postprocessed group {task_id} using vertebrae')
+        return True
 
     else:
         # Case 3: Neither brain nor neck exist - skip processing
@@ -272,14 +292,7 @@ def postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_
         seg_skipped = np.zeros((h, w, d), dtype=np.uint8)
         seg_skipped = nib.Nifti1Image(seg_skipped, original_affine)
         nib.save(seg_skipped, file_out)
-        return
-
-    # Apply the determined bounding box
-    seg_cropped = np.zeros((h, w, d), dtype=np.uint8)
-    seg_cropped[hmin:hmax, wmin:wmax, dmin:dmax] = seg[hmin:hmax, wmin:wmax, dmin:dmax]
-    seg_cropped = nib.Nifti1Image(seg_cropped, original_affine)
-    nib.save(seg_cropped, file_out)
-    print(f'Postprocessed group {task_id}')
+        return True
 
 
 def postprocess_head(task_id, file_seg_brain_group, file_out):

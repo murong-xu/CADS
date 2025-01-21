@@ -207,9 +207,12 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
                     # For group 558, also need cervical vertebrae as reference
                     if task_id == 558:
                         file_seg_vertebrae_group = os.path.join(output_dir, patient_id+'_part_'+str(552)+'.nii.gz')
-                        if not os.path.exists(file_seg_vertebrae_group):
-                            models[552].predict(file_in, file_seg_vertebrae_group)
-                        postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
+                        # First check if brain exists and is sufficient
+                        if not postprocess_head_and_neck(task_id, file_seg_brain_group, None, file_out):
+                            # Only predict vertebrae if brain check failed
+                            if not os.path.exists(file_seg_vertebrae_group):
+                                models[552].predict(file_in, file_seg_vertebrae_group)
+                            postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
                     else:
                         postprocess_head(task_id, file_seg_brain_group, file_out)
 
