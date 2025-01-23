@@ -14,7 +14,7 @@ experiment_results_path = {
     'totalsegmentator': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
 }
 output_folder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/compare_totalseg_omaseg/per-challenge'
-analysis_name = '1000_post_vs_roirobust'
+analysis_name = '1000_post_vs_roirobust_more_stat_tests'
 
 datasets_eval = [
     '0001_visceral_gc',
@@ -49,8 +49,7 @@ datasets_eval = [
 splits = ['test']
 prefixes = ['dice', 'hd95', 'hd', 'normalized_distance']
 filter_transitional_in_verse = True
-significance_level = 0.05
-stat_test_method = "paired_t_test"
+significance_level = 0.05  #TODO: test more values
 
 for prefix in prefixes:
     if prefix in ['dice', 'normalized_distance']:
@@ -98,11 +97,11 @@ for prefix in prefixes:
                     results_models[experiment] = challenge_results
 
         # Compre models
-        combined_results_df = compare_models_stat_test(results_models['omaseg'], results_models['totalsegmentator'], experiment_to_name_dict['omaseg'],
-                                                       experiment_to_name_dict['totalsegmentator'], stat_test_method=stat_test_method, p_value=significance_level, higher_better=higher_better)
+        combined_results_df = compare_models_stat_test(
+            results_models['omaseg'], results_models['totalsegmentator'], alpha=significance_level, higher_better=higher_better)
 
         # Highlight best scores
-        output_compare_folder = os.path.join(output_folder, analysis_name, stat_test_method)
+        output_compare_folder = os.path.join(output_folder, analysis_name)
         if not os.path.exists(output_compare_folder):
             os.makedirs(output_compare_folder)
         filename = os.path.join(output_compare_folder, f'{prefix}_{dataset}.xlsx')
@@ -118,54 +117,73 @@ for prefix in prefixes:
             format_omaseg = workbook.add_format({'bg_color': '#a1d99b'})
 
             for row in range(combined_results_df.shape[0]):
-                means = [float(combined_results_df.iloc[row][f'{model} mean±std'].split(
-                    '±')[0]) for model in experiment_to_name_dict.values()]
+                mean_stds = [combined_results_df.iloc[row][f'{model} mean±std'] for model in experiment_to_name_dict.values()]
+                
+                # if there is None value (model doesn't have this target) -> highlight other model's results
+                if any(x is None for x in mean_stds):
+                    valid_indices = [i for i, x in enumerate(mean_stds) if x is not None]
+                    rowindex = row + 1
+                    
+                    for item in valid_indices:
+                        colname = list(experiment_to_name_dict.values())[item] + " mean±std"
+                        colindex_mean = combined_results_df.columns.get_loc(colname)
+                        value_mean_std = combined_results_df[colname].iloc[row]
+                        worksheet.write(rowindex, colindex_mean, value_mean_std, format_mean_std)
+                    continue
+                
+                # both models' results available
+                means = [float(x.split('±')[0]) for x in mean_stds]
                 if all(x == means[0] for x in means):
                     continue
                 if prefix in ['dice', 'normalized_distance']:
-                    max_mean_col = [i for i, x in enumerate(
-                        means) if x == max(means)]
+                    max_mean_col = [i for i, x in enumerate(means) if x == max(means)]
                 else:
-                    max_mean_col = [i for i, x in enumerate(
-                        means) if x == min(means)]
+                    max_mean_col = [i for i, x in enumerate(means) if x == min(means)]
                 rowindex = row + 1
                 for item in max_mean_col:
-                    colname = list(experiment_to_name_dict.values())[
-                        item] + " mean±std"
-                    colindex_mean = combined_results_df.columns.get_loc(
-                        colname)
+                    colname = list(experiment_to_name_dict.values())[item] + " mean±std"
+                    colindex_mean = combined_results_df.columns.get_loc(colname)
                     value_mean_std = combined_results_df[colname].iloc[row]
-                    worksheet.write(rowindex, colindex_mean,
-                                    value_mean_std, format_mean_std)
+                    worksheet.write(rowindex, colindex_mean, value_mean_std, format_mean_std)
 
             for row in range(combined_results_df.shape[0]):
-                medians = [float(combined_results_df.iloc[row][f'{model} median'])
-                           for model in experiment_to_name_dict.values()]
+                medians = [combined_results_df.iloc[row][f'{model} median'] 
+                          for model in experiment_to_name_dict.values()]
+                
+                if any(x is None for x in medians):
+                    valid_indices = [i for i, x in enumerate(medians) if x is not None]
+                    rowindex = row + 1
+                    
+                    for item in valid_indices:
+                        colname = list(experiment_to_name_dict.values())[item] + " median"
+                        colindex_median = combined_results_df.columns.get_loc(colname)
+                        value_median = combined_results_df[colname].iloc[row]
+                        worksheet.write(rowindex, colindex_median, value_median, format_median)
+                    continue
+                
+                medians = [float(x) for x in medians]
                 if all(x == medians[0] for x in medians):
                     continue
                 if prefix in ['dice', 'normalized_distance']:
-                    max_median_col = [i for i, x in enumerate(
-                        medians) if x == max(medians)]
+                    max_median_col = [i for i, x in enumerate(medians) if x == max(medians)]
                 else:
-                    max_median_col = [i for i, x in enumerate(
-                        medians) if x == min(medians)]
+                    max_median_col = [i for i, x in enumerate(medians) if x == min(medians)]
                 rowindex = row + 1
                 for item in max_median_col:
-                    colname = list(experiment_to_name_dict.values())[
-                        item] + " median"
-                    colindex_median = combined_results_df.columns.get_loc(
-                        colname)
+                    colname = list(experiment_to_name_dict.values())[item] + " median"
+                    colindex_median = combined_results_df.columns.get_loc(colname)
                     value_median = combined_results_df[colname].iloc[row]
                     worksheet.write(rowindex, colindex_median,
-                                    value_median, format_median)
-
-            better_model_col = combined_results_df.columns.get_loc(
-                'better_model')
+                                 value_median, format_median)
+                    
+            better_model_col = combined_results_df.columns.get_loc('Better Model')
             for row in range(combined_results_df.shape[0]):
-                better_model = combined_results_df['better_model'].iloc[row]
-                if better_model == 'TotalSeg':
-                    worksheet.write(row + 1, better_model_col,
-                                    better_model, format_totalsegmentator)
-                elif better_model == 'OMASeg':
-                    worksheet.write(row + 1, better_model_col,
-                                    better_model, format_omaseg)
+                better_model = combined_results_df['Better Model'].iloc[row]
+                is_significant = combined_results_df['Significant After Correction'].iloc[row]
+                if is_significant: # only highlight if the difference is significant after correction
+                    if better_model == 'TotalSeg':
+                        worksheet.write(row + 1, better_model_col,
+                                        better_model, format_totalsegmentator)
+                    elif better_model == 'OMASeg':
+                        worksheet.write(row + 1, better_model_col,
+                                        better_model, format_omaseg)

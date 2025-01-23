@@ -4,14 +4,13 @@ import os
 import pickle
 from collections import defaultdict
 
-from table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids, bootstrap_ci, wilcoxon_test, wilcoxon_test_median, paired_t_test
+from table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids, bootstrap_ci, check_distribution_perform_stat_test, benjamini_hochberg_correction
 from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed, totalseg_exclude_to_compare
 
 
 # TODO: param
 output_folder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/compare_totalseg_omaseg'
-analysis_name = '1000_post_vs_roirobust'
-stat_name = 'paired_t_test'
+analysis_name = '1000_post_vs_roirobust_stat_tests_with_benjamini'
 
 experiment_results_path = {
     'omaseg': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/final_models/scores_postprocessed/test_0',
@@ -21,8 +20,7 @@ experiment_results_path = {
 prefixes = ['dice', 'hd95', 'hd', 'normalized_distance']
 distributions = ['in', 'out', 'all']
 splits = ['test']
-significance_level = 0.05
-stat_test_method = paired_t_test
+significance_level = 0.05 #TODO: test more values
 filter_transitional_in_verse = True
 exclude_face_from_overall_score = True
 
@@ -156,48 +154,83 @@ for prefix in prefixes:
     for distribution in distributions:
         omaseg_scores = experiments_dicts['OMASeg'][distribution]
         totalseg_scores = experiments_dicts['TotalSeg'][distribution]
-        stat_results = []
+
+        # Collect all p-values
+        p_values = []
+        p_value_to_structure = {}
+
+        stat_results = {structure: {
+            'Organ': structure,
+            'Test Type': None,
+            'Statistic': None,
+            'p-value': None,
+            'Effect Size': None,
+            'Effect Size Type': None,
+            'Is Normal': None,
+            'Normality p-value': None,
+            'Mean Difference': None,
+            'Positive Differences': None,
+            'Negative Differences': None,
+            'Better Model': None,
+            'Significant After Correction': None
+        } for structure in table_names}
+
         for structure in table_names:
             if structure in totalseg_exclude_to_compare:
                 # skip stat. tests
-                stat_results.append({
-                'Organ': structure,
-                'Statistic': None,
-                'p-value': None,
-                'Positive Differences': None,
-                'Negative Differences': None,
-                'Better Model': None
-            })
                 continue
-            else:
-                omaseg_structure_scores = omaseg_scores.get(structure, [])
-                totalseg_structure_scores = totalseg_scores.get(structure, [])
+            omaseg_structure_scores = omaseg_scores.get(structure, [])
+            totalseg_structure_scores = totalseg_scores.get(structure, [])
 
-                # Check if lengths are same
-                if len(omaseg_structure_scores) != len(totalseg_structure_scores):
-                    sample_size_mismatch[distribution][structure] += 1
-                    print(
-                        f"Sample size mismatch for {structure} in {distribution} distribution:")
-                    print(
-                        f"  OMASeg: {len(omaseg_structure_scores)}, TotalSeg: {len(totalseg_structure_scores)}")
+            # Check if lengths are same
+            if len(omaseg_structure_scores) != len(totalseg_structure_scores):
+                sample_size_mismatch[distribution][structure] += 1
+                print(f"Sample size mismatch for {structure} in {distribution} distribution:")
+                print(f"OMASeg: {len(omaseg_structure_scores)}, TotalSeg: {len(totalseg_structure_scores)}")
+                continue
 
-                stat, p, pos_diff, neg_diff, better_model = stat_test_method(
-                    omaseg_structure_scores, totalseg_structure_scores, 'OMASeg', 'TotalSeg', p_value=significance_level, higher_better=higher_better)
+            result = check_distribution_perform_stat_test(
+                omaseg_structure_scores, 
+                totalseg_structure_scores, 
+                alpha=significance_level,
+                higher_better=higher_better
+            )
+            
+            p_values.append(result['p_value'])
+            p_value_to_structure[len(p_values)-1] = structure
+            stat_results[structure].update({
+                'Test Type': result['test_type'],
+                'Statistic': result['statistic'],
+                'p-value': result['p_value'],
+                'Effect Size': result['effect_size'],
+                'Effect Size Type': result['effect_size_type'],
+                'Is Normal': result['is_normal'],
+                'Normality p-value': result['normality_p'],
+                'Mean Difference': result['mean_difference'],
+                'Positive Differences': result['pos_diff'],
+                'Negative Differences': result['neg_diff'],
+                'Better Model': result['better_model']
+            })
 
-                stat_results.append({
-                    'Organ': structure,
-                    'Statistic': stat,
-                    'p-value': p,
-                    'Positive Differences': pos_diff,
-                    'Negative Differences': neg_diff,
-                    'Better Model': better_model
-                })
-        stat_df = pd.DataFrame(stat_results)
+        # Apply Benjamini-Hochberg correction
+        if p_values:
+            rejections = benjamini_hochberg_correction(p_values, significance_level)
+            
+            for idx, is_significant in enumerate(rejections):
+                structure = p_value_to_structure[idx]
+                stat_results[structure]['Significant After Correction'] = is_significant
+                if not is_significant:
+                    stat_results[structure]['Better Model'] = None
+
+        stat_df = pd.DataFrame(list(stat_results.values()))
         d[f'{distribution} Statistic'] = stat_df['Statistic']
         d[f'{distribution} p-value'] = stat_df['p-value']
         d[f'{distribution} Positive Differences'] = stat_df['Positive Differences']
         d[f'{distribution} Negative Differences'] = stat_df['Negative Differences']
         d[f'{distribution} Better Model'] = stat_df['Better Model']
+        d[f'{distribution} Test Type'] = stat_df['Test Type']
+        d[f'{distribution} Effect Size'] = stat_df['Effect Size']
+        d[f'{distribution} Significant After Correction'] = stat_df['Significant After Correction']
 
         categories = {
             'totalseg_v1': list(labelmap_all_structure_renamed.values())[:104],
@@ -286,7 +319,7 @@ for prefix in prefixes:
     columns = columns_extra_info + [col for col in output_df.columns if col not in columns_extra_info]
     output_df = output_df[columns]
 
-    output_compare_folder = os.path.join(output_folder, analysis_name, stat_name)
+    output_compare_folder = os.path.join(output_folder, analysis_name)
     if not os.path.exists(output_compare_folder):
         os.makedirs(output_compare_folder)
     filename = os.path.join(output_compare_folder, f'{prefix}_compare_table.xlsx')
@@ -378,10 +411,12 @@ for prefix in prefixes:
             better_model_col = output_df.columns.get_loc(f'{distribution} Better Model')
             for row in range(output_df.shape[0]):
                 better_model = output_df[f'{distribution} Better Model'].iloc[row]
-                if better_model == 'TotalSeg':
-                    worksheet.write(row + 1, better_model_col, better_model, format_totalsegmentator)
-                elif better_model == 'OMASeg':
-                    worksheet.write(row + 1, better_model_col, better_model, format_omaseg)
+                is_significant = output_df[f'{distribution} Significant After Correction'].iloc[row]
+                if is_significant: # only highlight if the difference is significant after correction
+                    if better_model == 'TotalSeg':
+                        worksheet.write(row + 1, better_model_col, better_model, format_totalsegmentator)
+                    elif better_model == 'OMASeg':
+                        worksheet.write(row + 1, better_model_col, better_model, format_omaseg)
 
     # Store means
     category_results = []

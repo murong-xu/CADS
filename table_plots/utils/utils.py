@@ -59,8 +59,31 @@ def get_task_id(structure):
     return None 
 
 
-def compare_models_stat_test(model1_results, model2_results, model1_name, model2_name, stat_test_method='paired_t_test', p_value=0.05, higher_better=True):
-    combined_results = []
+def compare_models_stat_test(model1_results, model2_results, alpha=0.05, higher_better=True):    
+    # Collect all p-values
+    p_values = []
+    p_value_to_structure = {}
+
+    table_names = list(model1_results.keys())
+    stat_results = {structure: {
+        'Organ': structure,
+        'OMASeg mean±std': None,
+        'OMASeg median': None,
+        'TotalSeg mean±std': None,
+        'TotalSeg median': None,
+        'Test Type': None,
+        'Statistic': None,
+        'p-value': None,
+        'Effect Size': None,
+        'Effect Size Type': None,
+        'Is Normal': None,
+        'Normality p-value': None,
+        'Mean Difference': None,
+        'Positive Differences': None,
+        'Negative Differences': None,
+        'Better Model': None,
+        'Significant After Correction': None
+    } for structure in table_names}
 
     for organ, _ in model1_results.items():
         model1_scores = model1_results[organ]
@@ -68,30 +91,143 @@ def compare_models_stat_test(model1_results, model2_results, model1_name, model2
 
         aligned_model1, aligned_model2 = align_and_filter_scores(model1_scores, model2_scores)
 
-        if stat_test_method == 'wilcoxon_test_median':
-            stat, p, pos_diff, neg_diff, better_model = wilcoxon_test_median(aligned_model1, aligned_model2, model1_name, model2_name, p_value=p_value, higher_better=higher_better)
-        elif stat_test_method == 'wilcoxon_test':
-            stat, p, pos_diff, neg_diff, better_model = wilcoxon_test(aligned_model1, aligned_model2, model1_name, model2_name, p_value=p_value, higher_better=higher_better)
-        elif stat_test_method == 'paired_t_test':
-            stat, p, pos_diff, neg_diff, better_model = paired_t_test(aligned_model1, aligned_model2, model1_name, model2_name, p_value=p_value, higher_better=higher_better)
-        else:
-            raise ValueError(f"Unsupported statistical test method: {stat_test_method}")
+        # if TotalSeg doesn't have this target organ
+        model2_all_zero = np.all(np.array(aligned_model2) == 0)
+        if model2_all_zero:
+            stat_results[organ].update({
+                'OMASeg mean±std': f"{np.mean(aligned_model1):.4f}±{np.std(aligned_model1):.4f}",
+                'OMASeg median': np.median(aligned_model1),
+                })
+            continue
 
-        combined_results.append({
-            'Organ': organ,
-            f'{model1_name} mean±std': f"{np.mean(aligned_model1):.4f}±{np.std(aligned_model1):.4f}",
-            f'{model1_name} median': np.median(aligned_model1),
-            f'{model2_name} mean±std': f"{np.mean(aligned_model2):.4f}±{np.std(aligned_model2):.4f}",
-            f'{model2_name} median': np.median(aligned_model2),
-            'Statistic': stat,
-            'p_value': p,
-            'Positive Differences': pos_diff,
-            'Negative Differences': neg_diff,
-            'better_model': better_model,
+        result = check_distribution_perform_stat_test(
+            aligned_model1, 
+            aligned_model2, 
+            alpha=alpha,
+            higher_better=higher_better
+        )
+
+        p_values.append(result['p_value'])
+        p_value_to_structure[len(p_values)-1] = organ
+        stat_results[organ].update({
+            'OMASeg mean±std': f"{np.mean(aligned_model1):.4f}±{np.std(aligned_model1):.4f}",
+            'OMASeg median': np.median(aligned_model1),
+            'TotalSeg mean±std': f"{np.mean(aligned_model2):.4f}±{np.std(aligned_model2):.4f}",
+            'TotalSeg median': np.median(aligned_model2),
+            'Test Type': result['test_type'],
+            'Statistic': result['statistic'],
+            'p-value': result['p_value'],
+            'Effect Size': result['effect_size'],
+            'Effect Size Type': result['effect_size_type'],
+            'Is Normal': result['is_normal'],
+            'Normality p-value': result['normality_p'],
+            'Mean Difference': result['mean_difference'],
+            'Positive Differences': result['pos_diff'],
+            'Negative Differences': result['neg_diff'],
+            'Better Model': result['better_model']
         })
+
+    # Apply Benjamini-Hochberg correction
+    if p_values:
+        rejections = benjamini_hochberg_correction(p_values, alpha)
+        
+        for idx, is_significant in enumerate(rejections):
+            structure = p_value_to_structure[idx]
+            stat_results[structure]['Significant After Correction'] = is_significant
+            if not is_significant:
+                stat_results[structure]['Better Model'] = None
     
-    combined_results_df = pd.DataFrame(combined_results)
+    combined_results_df = pd.DataFrame(stat_results).T
     return combined_results_df
+
+def benjamini_hochberg_correction(p_values, alpha=0.05):
+    """
+    Perform Benjamini-Hochberg FDR correction on a list of p-values.
+    """
+    # Filter out None values and keep track of indices
+    valid_p_values = []
+    valid_indices = []
+    for i, p in enumerate(p_values):
+        if p is not None:
+            valid_p_values.append(p)
+            valid_indices.append(i)
+    
+    # If no valid p-values, return all False
+    if not valid_p_values:
+        return np.zeros(len(p_values), dtype=bool)
+    
+    # Convert to numpy array for sorting
+    valid_p_values = np.array(valid_p_values)
+    
+    n = len(valid_p_values)
+    sorted_p_indices = np.argsort(valid_p_values)
+    sorted_p_values = np.sort(valid_p_values)
+    rejected = np.zeros(len(p_values), dtype=bool)  # Initialize with original length
+    thresholds = [alpha * (i + 1) / n for i in range(n)]
+    
+    for i in range(n-1, -1, -1):
+        if sorted_p_values[i] < thresholds[i]:
+            # Map back to original indices
+            for j in range(i+1):
+                original_idx = valid_indices[sorted_p_indices[j]]
+                rejected[original_idx] = True
+            break
+    
+    return rejected
+
+def check_normality(differences, alpha=0.05):
+    if len(differences) < 3:  # Shapiro-Wilk needs at least 3 samples
+        return False, 0
+    
+    # Shapiro-Wilk test
+    statistic, p_value = stats.shapiro(differences)
+    is_normal = p_value > alpha
+    return is_normal, p_value
+
+def check_distribution_perform_stat_test(scores1, scores2, alpha=0.05, higher_better=True):
+    differences = np.array(scores1) - np.array(scores2)
+    
+    # check distribution
+    is_normal, normality_p = check_normality(differences, alpha)
+    if is_normal:
+        stat, p_value = stats.ttest_rel(scores1, scores2, alternative="two-sided")
+        test_type = 'Paired t-test'
+    else:
+        stat, p_value = stats.wilcoxon(scores1, scores2, alternative='two-sided')
+        test_type = 'Wilcoxon signed-rank test'
+    
+    # calculate effective size (Cohen's d for t-test or r for Wilcoxon)
+    if is_normal:
+        effect_size = np.mean(differences) / np.std(differences)
+        effect_size_type = "Cohen's d"
+    else:
+        z_score = stats.norm.ppf(1 - p_value/2)
+        effect_size = abs(z_score) / np.sqrt(len(scores1) * 2)
+        effect_size_type = "r (Wilcoxon)"
+    
+    # determine better model
+    mean_diff = np.mean(differences)
+    if p_value < alpha:
+        if higher_better:
+            better_model = 'OMASeg' if mean_diff > 0 else 'TotalSeg'
+        else:
+            better_model = 'OMASeg' if mean_diff < 0 else 'TotalSeg'
+    else:
+        better_model = None
+    
+    return {
+        'test_type': test_type,
+        'statistic': stat,
+        'p_value': p_value,
+        'effect_size': effect_size,
+        'effect_size_type': effect_size_type,
+        'is_normal': is_normal,
+        'normality_p': normality_p,
+        'better_model': better_model,
+        'mean_difference': mean_diff,
+        'pos_diff': np.sum(differences > 0),
+        'neg_diff': np.sum(differences < 0)
+    }
 
 
 def bootstrap_ci(data, n_iterations=10000, ci=0.95):
