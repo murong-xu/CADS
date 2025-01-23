@@ -1,5 +1,5 @@
 import numpy as np
-from dataset_utils.mappings import replacements
+from omaseg.dataset_utils.mappings import replacements
 
 
 def remove_no_label_slides_gt(gt_array):

@@ -10,10 +10,10 @@ from p_tqdm import p_map
 from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
 
-from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps, except_labels_combine
-from dataset_utils.postprocessing import _do_outlier_postprocessing_groups, postprocess_seg, postprocess_head, postprocess_head_and_neck
-from utils.snapshot import generate_snapshot
-from utils.libs import time_it
+from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps, except_labels_combine
+from omaseg.dataset_utils.postprocessing import _do_outlier_postprocessing_groups, postprocess_seg, postprocess_head, postprocess_head_and_neck
+from omaseg.utils.snapshot import generate_snapshot
+from omaseg.utils.libs import time_it
 
 # TODO: 
 TRAINERS = {

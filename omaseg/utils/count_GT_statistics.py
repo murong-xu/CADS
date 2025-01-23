@@ -3,8 +3,8 @@ import pickle
 import pandas as pd
 import glob
 
-from dataset_utils.bodyparts_labelmaps import labelmap_all_structure
-from dataset_utils.mappings import replacements
+from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure
+from omaseg.dataset_utils.mappings import replacements
 
 input_folder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_ready_1mm'
 output_folder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results'

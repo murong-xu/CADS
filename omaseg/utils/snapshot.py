@@ -7,7 +7,7 @@ from scipy.ndimage.measurements import center_of_mass
 import json
 import matplotlib.pyplot as plt
 import random
-from utils.colormap import get_colors
+from omaseg.utils.colormap import get_colors
 
 colors = get_colors()
 cm_itk = ListedColormap(colors)

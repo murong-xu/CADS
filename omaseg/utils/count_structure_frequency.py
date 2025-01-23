@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import pickle
-from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps
+from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps
 
 def main():
     path_merged_label_summary = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/best_22k/label_count_summary/merged/22k_label_summary.npz'  # TODO: 

@@ -2,7 +2,7 @@ import pandas as pd
 import glob
 import os
 
-from table_plots.utils.utils import filter_rows, transitional_ids, amos_uterus_ids, compare_models_stat_test
+from omaseg.table_plots.utils.utils import filter_rows, transitional_ids, amos_uterus_ids, compare_models_stat_test
 
 # TODO: param
 experiment_to_name_dict = {

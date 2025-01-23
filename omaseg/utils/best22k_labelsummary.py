@@ -7,8 +7,8 @@ import argparse
 import pandas as pd
 import matplotlib.pyplot as plt 
 
-from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps
-from dataset_utils.mappings import map_labels
+from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps
+from omaseg.dataset_utils.mappings import map_labels
 
 # import debugpy
 # debugpy.listen(('0.0.0.0', 4444))

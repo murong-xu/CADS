@@ -1,6 +1,6 @@
 import argparse
 import os
-from utils.compute_metrics import compute_metrics, compute_metrics_from_extra_test_set
+from omaseg.utils.compute_metrics import compute_metrics, compute_metrics_from_extra_test_set
 
 def all_or_names(value):
     if value == 'all':

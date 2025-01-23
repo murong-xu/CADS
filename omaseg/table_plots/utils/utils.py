@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-from dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
+from omaseg.dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
 
 
 def filter_rows(dataframe, splits=['test']):

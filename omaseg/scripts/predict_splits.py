@@ -2,9 +2,9 @@ import argparse
 import torch
 import os
 
-from utils.inference import predict
-from dataset_utils.select_files import select_imgs
-from dataset_utils.bodyparts_labelmaps import labelmap_all_structure
+from omaseg.utils.inference import predict
+from omaseg.dataset_utils.select_files import select_imgs
+from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure
 
 def check_input_task(value):
     valid_numbers = {551, 552, 553, 554, 555, 556, 557, 558, 559}

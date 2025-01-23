@@ -8,14 +8,14 @@ import seg_metrics.seg_metrics as sg
 import logging
 import pickle
 
-from dataset_utils.datasets_labelmap import dataset2labelmap, dataset2labelmap_extra_test
-from dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
-from dataset_utils.mappings import replace_labelmap, map_labels, replacements, FULLY_ANNOTATED_DATASETS, TOL_MISSING_VOLLUME_PERCENTAGE
-from dataset_utils.postprocessing_for_eval import PostprocessingMetric, RecalculateAvgOrganVolume
-from dataset_utils.select_files import select_labels, select_files_total_seg, select_labels_from_gt_data
+from omaseg.dataset_utils.datasets_labelmap import dataset2labelmap, dataset2labelmap_extra_test
+from omaseg.dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
+from omaseg.dataset_utils.mappings import replace_labelmap, map_labels, replacements, FULLY_ANNOTATED_DATASETS, TOL_MISSING_VOLLUME_PERCENTAGE
+from omaseg.dataset_utils.postprocessing_for_eval import PostprocessingMetric, RecalculateAvgOrganVolume
+from omaseg.dataset_utils.select_files import select_labels, select_files_total_seg, select_labels_from_gt_data
 
-from utils.metrics import compute_max_HD_distance, save_metric, save_missing_structure_check
-from utils.libs import time_it
+from omaseg.utils.metrics import compute_max_HD_distance, save_metric, save_missing_structure_check
+from omaseg.utils.libs import time_it
 
 partname_mapping = {
         551: 251,

@@ -7,7 +7,7 @@ from scipy.ndimage.measurements import center_of_mass
 from TPTBox import NII, to_nii
 from TPTBox.logger import Print_Logger
 
-from dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
+from omaseg.dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
 
 _do_outlier_postprocessing_groups = [551, 553, 554, 556, 559]
 

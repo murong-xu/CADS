@@ -4,8 +4,8 @@ import os
 import pickle
 from collections import defaultdict
 
-from table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids, bootstrap_ci, check_distribution_perform_stat_test, benjamini_hochberg_correction
-from dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed, totalseg_exclude_to_compare
+from omaseg.table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids, bootstrap_ci, check_distribution_perform_stat_test, benjamini_hochberg_correction
+from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed, totalseg_exclude_to_compare
 
 
 # TODO: param
