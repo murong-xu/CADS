@@ -11,14 +11,15 @@ from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
 
 from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps, except_labels_combine
+from omaseg.dataset_utils.preprocessing import preprocess_nifti, restore_seg_in_orig_format
 from omaseg.dataset_utils.postprocessing import _do_outlier_postprocessing_groups, postprocess_seg, postprocess_head, postprocess_head_and_neck
 from omaseg.utils.snapshot import generate_snapshot
-from omaseg.utils.libs import time_it
+from omaseg.utils.libs import time_it, cleanup_temp_files
 
 # TODO: 
 TRAINERS = {
     551: 'nnUNetTrainerNoMirroring__nnUNetResEncUNetLPlans__3d_fullres',
-    552: 'nnUNetTrainerNoMirroringOversampleImage__nnUNetResEncUNetLPlans__3d_fullres',
+    552: 'nnUNetTrainerNoMirroring__nnUNetResEncUNetLPlans__3d_fullres',
     553: 'nnUNetTrainerNoMirroring__nnUNetResEncUNetLPlans__3d_fullres',
     554: 'nnUNetTrainerNoMirroring__nnUNetResEncUNetLPlans__3d_fullres',
     555: 'nnUNetTrainerNoMirroring__nnUNetResEncUNetLPlans__3d_fullres',
@@ -171,10 +172,9 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
         print("Predicting file {}/{}   ".format(i+1, len(files_in)), patient_id)
         start = time.time()
 
-        # TODO:
         if preprocess_omaseg:
             # Reorient to RAS, resampling to 1.5, remove rotation and translation
-            print('Preprocessing')
+            temp_dir, file_in, metadata_orig, preprocessing_done = preprocess_nifti(file_in, spacing=1.5, num_threads_preprocessing=num_threads_preprocessing)
 
         output_dir = os.path.join(folder_out, patient_id)
         if not os.path.exists(output_dir):
@@ -254,5 +254,11 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
                 generate_snapshot(file_in, file_seg_combined, file_snapshot)
             except FileNotFoundError as e:
                 print(f"Error: {e}")
+        
+        # reverse pre-processing
+        if preprocess_omaseg and preprocessing_done:
+            restore_seg_in_orig_format(file_out, metadata_orig, num_threads_preprocessing=num_threads_preprocessing)
 
+        if temp_dir:
+            cleanup_temp_files(temp_dir)
         print(f"Finished in {time.time() - start:.2f}s")

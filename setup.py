@@ -27,7 +27,8 @@ setup(name='OMASeg',
             'requests;python_version>="3.10"',
             'rt_utils',
             'dicom2nifti',
-            'pyarrow'
+            'pyarrow',
+            'psutil'
         ],
         zip_safe=False,
         classifiers=[

@@ -98,3 +98,7 @@ def setup_nnunet_env():
     os.environ["nnUNet_raw"] = str(weights_dir)  # not needed, just needs to be an existing directory
     os.environ["nnUNet_preprocessed"] = str(weights_dir)  # not needed, just needs to be an existing directory
     os.environ["nnUNet_results"] = str(weights_dir)
+
+def cleanup_temp_files(dir_to_remove):
+    if os.path.exists(dir_to_remove):
+        shutil.rmtree(dir_to_remove)

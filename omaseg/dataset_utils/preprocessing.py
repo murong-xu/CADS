@@ -1,3 +1,5 @@
+import os
+import tempfile
 import numpy as np
 import nibabel as nib
 import nibabel.orientations as nio
@@ -201,3 +203,82 @@ def change_spacing(img_in, new_spacing=1.25, target_shape=None, order=0, nr_cpus
         new_data = new_data.astype(dtype)
 
     return nib.Nifti1Image(new_data, new_affine)
+
+def determine_orientation(affine):
+    axis_labels = ['R', 'L', 'A', 'P', 'S', 'I']
+    orientation = []
+
+    # iterate over each column, identify the principal direction for each axis
+    for i in range(3): 
+        axis = affine[:3, i]
+        axis_direction = np.argmax(np.abs(axis)) 
+        axis_sign = np.sign(axis[axis_direction])  # determine the sign of the direction
+
+        # assign labels based on the axis and direction sign
+        if axis_sign == -1:
+            label_index = axis_direction * 2 + 1  # label negative directions
+        else:
+            label_index = axis_direction * 2  # label positive directions
+
+        orientation.append(axis_labels[label_index])
+
+    return ''.join(orientation)
+
+def preprocess_nifti(file_in, spacing=1.5, num_threads_preprocessing=2):
+    raw_img = nib.load(file_in)
+    raw_img_numpy = raw_img.get_fdata()
+    
+    original_affine = raw_img.affine
+    original_spacing = np.diag(original_affine, k=0)[:3]
+    original_orientation = nio.ornt2axcodes(nio.io_orientation(original_affine))
+
+    # If both spacing and orientation are correct, return original image
+    if np.all(np.isclose(original_spacing, spacing)) and original_orientation == ('R', 'A', 'S') and np.allclose(original_affine[:, -1], np.array([0, 0, 0, 1])):
+        print(f'Image {file_in} already has correct spacing and orientation. Skipping preprocessing.')
+        return None, file_in, None, False
+
+    else:
+        print(f'Preprocessing image {file_in}')
+        # Reorient to RAS
+        img_reoriented = reorient_to(raw_img_numpy, original_affine, axcodes_to=('R', 'A', 'S'), verb=True)
+
+        # Resampling to 1.5
+        img_resampled = change_spacing(img_reoriented, [spacing, spacing, spacing], order=3, dtype=np.int32, nr_cpus=num_threads_preprocessing)
+        
+        # Remove rotation & translation
+        affine_removed = remove_rotation_and_translation(img_resampled.affine)
+        img_removed = nib.Nifti1Image(img_resampled.get_fdata(), affine_removed)
+
+        # Create temp file path and save
+        temp_dir = tempfile.gettempdir()
+        temp_subdir = os.path.join(temp_dir, 'omaseg_inference')
+        os.makedirs(temp_subdir, exist_ok=True)
+        basename = os.path.basename(file_in).split('.nii.gz')[0]
+        temp_path = os.path.join(temp_subdir, f"{basename}_preprocessed.nii.gz")
+        nib.save(img_removed, temp_path)
+
+        metadata_orig = {
+            'affine': original_affine,
+            'spacing': original_spacing
+        }
+        return temp_subdir, temp_path, metadata_orig, True
+    
+
+def restore_seg_in_orig_format(file_seg, metadata_orig, num_threads_preprocessing=2):
+    print('Restore the segmentation to original format...')
+
+    seg_preprocessed = nib.load(file_seg)
+    orig_spacing = metadata_orig['spacing']
+    orig_affine = metadata_orig['affine']
+
+    # Resampling
+    seg_resampled = change_spacing(seg_preprocessed, orig_spacing, order=0, dtype=np.int32, nr_cpus=num_threads_preprocessing)
+
+    # Reorientation
+    orig_orientation = tuple(determine_orientation(orig_affine))
+    seg_reoriented= reorient_to(seg_resampled.get_fdata(), seg_resampled.affine, orig_orientation, verb=True)
+
+    # Bring back tranlsation
+    seg_reoriented.affine[:, -1] = orig_affine[:, -1]
+    seg_restored = nib.Nifti1Image(seg_reoriented.get_fdata().astype(np.uint8), seg_reoriented.affine)
+    nib.save(seg_restored, file_seg)
