@@ -13,10 +13,10 @@ from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
 from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps, except_labels_combine
 from omaseg.dataset_utils.preprocessing import preprocess_nifti, restore_seg_in_orig_format
 from omaseg.dataset_utils.postprocessing import _do_outlier_postprocessing_groups, postprocess_seg, postprocess_head, postprocess_head_and_neck
+# from omaseg.dataset_utils.TPTBox import postprocess_seg_TPTBox
 from omaseg.utils.snapshot import generate_snapshot
 from omaseg.utils.libs import time_it, cleanup_temp_files
 
-# TODO: 
 TRAINERS = {
     551: 'nnUNetTrainerNoMirroring__nnUNetResEncUNetLPlans__3d_fullres',
     552: 'nnUNetTrainerNoMirroring__nnUNetResEncUNetLPlans__3d_fullres',
@@ -172,6 +172,7 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
         print("Predicting file {}/{}   ".format(i+1, len(files_in)), patient_id)
         start = time.time()
 
+        temp_dir = None
         if preprocess_omaseg:
             # Reorient to RAS, resampling to 1.5, remove rotation and translation
             temp_dir, file_in, metadata_orig, preprocessing_done = preprocess_nifti(file_in, spacing=1.5, num_threads_preprocessing=num_threads_preprocessing)
@@ -198,6 +199,8 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
 
             if postprocess_omaseg:
                 if task_id in _do_outlier_postprocessing_groups:
+                    #TODO: select whether to use TPTBox before running inference
+                    # postprocess_seg_TPTBox(file_out, task_id, file_out)
                     postprocess_seg(file_out, task_id, file_out)
                 if task_id in [557, 558]:
                     file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')

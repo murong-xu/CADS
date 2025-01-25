@@ -3,9 +3,13 @@ import numpy as np
 import nibabel as nib
 import nibabel.orientations as nio
 from scipy.ndimage.measurements import center_of_mass
+from scipy import ndimage
+from typing import Sequence, Union, Optional, List
+import cc3d
+import cv2
 
-from TPTBox import NII, to_nii
-from TPTBox.logger import Print_Logger
+PathLike = Union[str, Path]
+LabelType = Union[int, List[int]]
 
 from omaseg.dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
 
@@ -124,87 +128,320 @@ labels_info = {
 }
 
 
-def postprocess_seg(seg_path: Path | str | NII, task_id: int, out_path: Path | str | None = None, aggressiveness=1, verbose=False):
-    nii = to_nii(seg_path, True)
-    logger = Print_Logger()
-    for idx, key in map_taskid_to_labelmaps[task_id].items():
-        if idx == 0:
-            continue
-        if key not in labels_info:
-            logger.on_warning(f"{key=} is not set up in the info file")
-            continue
-        info = labels_info[key]
-        logger.on_neutral(key)
-        if info.get("fill", False):
-            logger.on_neutral("Fill holes")
-            nii = (
-                nii.fill_holes_(idx)
-                .fill_holes_(idx, nii.get_axis("S"))
-                .fill_holes_(idx, nii.get_axis("R"))
-                .fill_holes_(idx, nii.get_axis("A"))
-                .fill_holes_(idx)
-            )
-        nii = filter_connected_components(
-            nii, idx, min_volume=info.get("autofix", 0) * aggressiveness, max_count_component=info.get("max_cc", None), verbose=verbose
-        )
-        if info.get("convex_hull", 0) != 0:
-            nii2 = nii.extract_label(idx).erode_msk_(
-                info.get("convex_hull", 0)).calc_convex_hull_("S")
-            nii[nii2 != 0] = nii2[nii2 != 0] * idx
+def get_largest_k_connected_components(
+    arr: np.ndarray,
+    k: Optional[int] = None,
+    labels: Optional[Union[int, Sequence[int]]] = None,
+    connectivity: int = 3,
+    return_original_labels: bool = True,
+) -> np.ndarray:
+    """finds the largest k connected components in a given array (does NOT work with zero as label!)
 
-    if out_path is not None:
-        nii.save(out_path)
-    print(f'Postprocessed group {task_id}')
+    Args:
+        arr (np.ndarray): input array
+        k (int | None): finds the k-largest components. If k is None, will find all connected components and still sort them by size
+        labels (int | list[int] | None): Labels that the algorithm should be applied to. If none, applies on all labels found in arr.
+        connectivity: in range [1,3]. For 2D images, 2 and 3 is the same.
+        return_original_labels (bool): If set to False, will label the components from 1 to k. Defaults to True
+
+    Returns:
+        np.ndarray: array with the largest k connected components
+    """
+    # Input validation
+    assert k is None or k > 0
+    assert 2 <= arr.ndim <= 3, f"expected 2D or 3D, but got {arr.ndim}"
+    assert 1 <= connectivity <= 3, f"expected connectivity in [1,3], but got {connectivity}"
+
+    # Convert connectivity to cc3d format
+    if arr.ndim == 2:
+        connectivity = min(connectivity * 2, 8)  # 1:4, 2:8, 3:8
+    else:
+        connectivity = 6 if connectivity == 1 else 18 if connectivity == 2 else 26
+
+    # Copy array and prepare labels
+    arr2 = arr.copy()
+    
+    # Handle labels
+    if labels is None:
+        unique_labels = np.unique(arr2)
+        labels = [l for l in unique_labels if l != 0]
+    elif isinstance(labels, (int, np.integer)):
+        labels = [labels]
+    else:
+        labels = list(labels)
+
+    # Set non-target labels to zero
+    arr2[~np.isin(arr2, labels)] = 0
+
+    # Find connected components using cc3d
+    labels_out = cc3d.connected_components(arr2 > 0, connectivity=connectivity)
+    n = labels_out.max()
+
+    if k is None:
+        k = n
+    k = min(k, n)  # if k > N, will return all N but still sorted
+
+    # Calculate volumes for each component
+    volumes = {}
+    for i in range(1, n + 1):
+        volumes[i] = np.sum(labels_out == i)
+
+    # Sort components by volume
+    label_volume_pairs = [(i, ct) for i, ct in volumes.items() if ct > 0]
+    label_volume_pairs.sort(key=lambda x: x[1], reverse=True)
+    preserve = [x[0] for x in label_volume_pairs[:k]]
+
+    # Create output array
+    cc_out = np.zeros(arr.shape, dtype=arr.dtype)
+    for i, preserve_label in enumerate(preserve):
+        cc_out[labels_out == preserve_label] = i + 1
+
+    if return_original_labels:
+        # Multiply with original array to get original labels
+        result = arr.copy()
+        result *= (cc_out > 0)
+        return result
+    return cc_out
+
+def np_extract_label(arr: np.ndarray, label: Union[int, Sequence[int]]) -> np.ndarray:
+    result = arr.copy()
+    if isinstance(label, (list, tuple)):
+        mask = np.zeros_like(result, dtype=bool)
+        for l in label:
+            mask = mask | (result == l)
+        result[~mask] = 0
+    else:
+        result[result != label] = 0
+    return result  
+
+def fill(binary_array: np.ndarray) -> np.ndarray:
+    return ndimage.binary_fill_holes(binary_array)
+
+def np_fill_holes(arr: np.ndarray, 
+                 label_ref: Optional[Union[int, Sequence[int]]] = None, 
+                 slice_wise_dim: Optional[int] = None) -> np.ndarray:
+    assert 2 <= arr.ndim <= 3
+    assert arr.ndim == 3 or slice_wise_dim is None, "slice_wise_dim set but array is not 3D"
+    
+    if label_ref is None:
+        labels = list(np.unique(arr))
+        if 0 in labels:
+            labels.remove(0)
+    elif isinstance(label_ref, (int, np.integer)):
+        labels = [label_ref]
+    else:
+        labels = list(label_ref)
+
+    result = arr.copy()
+    for l in labels:
+        # extract current label
+        arr_l = np_extract_label(result, l)
+        binary_mask = (arr_l == l)
+        
+        if slice_wise_dim is None:
+            # 3D
+            filled = fill(binary_mask)
+        else:
+            # 2D
+            assert 0 <= slice_wise_dim <= arr.ndim - 1
+            filled = np.swapaxes(binary_mask, 0, slice_wise_dim)
+            filled = np.stack([fill(x) for x in filled])
+            filled = np.swapaxes(filled, 0, slice_wise_dim)
+        
+        # only fill the holes in region within original mask
+        holes = filled & ~binary_mask
+        result[holes] = l
+    
+    return result
+
+def fill_holes_3d(img_data: np.ndarray, 
+                 label: Optional[Union[int, List[int]]] = None,
+                 verbose: bool = True) -> np.ndarray:
+    """Fill holes along 3 axes (RAS)"""
+    if verbose:
+        print("Fill holes")
+    
+    result = img_data.copy()
+    
+    # 3D
+    result = np_fill_holes(result, label_ref=label, slice_wise_dim=None)
+    
+    # S
+    result = np_fill_holes(result, label_ref=label, slice_wise_dim=2)
+    
+    # R
+    result = np_fill_holes(result, label_ref=label, slice_wise_dim=0)
+    
+    # A
+    result = np_fill_holes(result, label_ref=label, slice_wise_dim=1)
+    
+    # Again 3D
+    result = np_fill_holes(result, label_ref=label, slice_wise_dim=None)
+    
+    return result
+
+def erode_mask(img_data: np.ndarray, 
+               mm: int = 5, 
+               labels: Optional[LabelType] = None, 
+               connectivity: int = 3) -> np.ndarray:
+    if labels is None:
+        labels = list(np.unique(img_data))
+    if isinstance(labels, int):
+        labels = [labels]
+    
+    result = img_data.copy()
+    struct = ndimage.generate_binary_structure(3, connectivity)
+    
+    for label in labels:
+        if label == 0:
+            continue
+        binary = (result == label)
+        eroded = ndimage.binary_erosion(binary, structure=struct, iterations=mm)
+        result[binary & ~eroded] = 0
+    
+    return result
+
+def calc_convex_hull(img_data: np.ndarray, axis: Optional[int] = None) -> np.ndarray:
+    result = img_data.copy()
+    binary = result > 0
+    
+    if axis is not None:
+        for i in range(binary.shape[axis]):
+            if axis == 0:
+                slice_data = binary[i, :, :]
+            elif axis == 1:
+                slice_data = binary[:, i, :]
+            else:
+                slice_data = binary[:, :, i]
+            
+            if np.any(slice_data):
+                contours, _ = cv2.findContours(slice_data.astype(np.uint8), 
+                                             cv2.RETR_EXTERNAL, 
+                                             cv2.CHAIN_APPROX_SIMPLE)
+                if contours:
+                    hull = cv2.convexHull(contours[0])
+                    hull_mask = np.zeros_like(slice_data)
+                    cv2.fillPoly(hull_mask, [hull], 1)
+                    
+                    if axis == 0:
+                        binary[i, :, :] = hull_mask
+                    elif axis == 1:
+                        binary[:, i, :] = hull_mask
+                    else:
+                        binary[:, :, i] = hull_mask
+    else:
+        for ax in range(3):
+            binary = calc_convex_hull(binary, axis=ax)
+    
+    result[binary] = img_data[binary]
+    return result
 
 
 def filter_connected_components(
-    self: NII,
-    labels: int | list[int] | None,
-    min_volume: int | None = None,
-    max_volume: int | None = None,
-    max_count_component=None,
+    arr: np.ndarray,
+    labels: Union[int, List[int], None],
+    min_volume: Optional[int] = None,
+    max_volume: Optional[int] = None,
+    max_count_component: Optional[int] = None,
     connectivity: int = 3,
-    removed_to_label=0,
-    inplace=False,
-    verbose=True,
-):
+    removed_to_label: int = 0,
+    verbose: bool = True,
+) -> np.ndarray:
     """
-    Filter connected components in a segmentation array based on specified volume constraints.
-
-    Parameters:
-    labels (int | list[int]): The labels of the components to filter.
-    min_volume (int | None): Minimum volume for a component to be retained. Components smaller than this will be removed.
-    max_volume (int | None): Maximum volume for a component to be retained. Components larger than this will be removed.
-    max_count_component (int | None): Maximum number of components to retain. Once this limit is reached, remaining components will be removed.
-    connectivity (int): Connectivity criterion for defining connected components (default is 3).
-    removed_to_label (int): Label to assign to removed components (default is 0).
-
-    Returns:
-    None
+    Replicate TPTBox: filter_connected_components
     """
-    arr = self.get_seg_array()
-    nii = self.get_largest_k_segmentation_connected_components(
-        None, labels, connectivity=connectivity, return_original_labels=False)
-    idxs = nii.unique()
+    cc_arr = get_largest_k_connected_components(
+        arr, k=None, labels=labels, 
+        connectivity=connectivity, 
+        return_original_labels=False
+    )
+    
+    # exclude background 0
+    idxs = np.unique(cc_arr)
+    idxs = idxs[idxs != 0]
+    
+    result = arr.copy()
+    
     for k, idx in enumerate(idxs, start=1):
-        msk = nii.extract_label(idx)
-        nii *= -msk + 1
-        s = msk.sum()
-        if max_count_component is not None and k > max_count_component:  # for mammary glands and sternum
-            print("Remove additional components", "n =",
-                  idxs[-1] - k, "/", idxs[-1]) if verbose else None
-            arr[msk.get_array() != 0] = removed_to_label
-            arr[nii.get_array() != 0] = removed_to_label  # set all future to 0
+        msk = (cc_arr == idx)
+        cc_arr[msk] = 0
+        
+        # calc volume
+        s = np.sum(msk)
+        
+        # check max_count
+        if max_count_component is not None and k > max_count_component:
+            if verbose:
+                print("Remove additional components", "n =",
+                      len(idxs) - k, "/", len(idxs))
+            result[msk] = removed_to_label
+            result[cc_arr != 0] = removed_to_label
             break
+            
+        # check min volume
         if min_volume is not None and s < min_volume:
-            print(
-                f"Remove components that are to small; n = {idxs[-1] - k+1} with {s} or smaller < {min_volume=}") if verbose else None
-            arr[msk.get_array() != 0] = removed_to_label
-            arr[nii.get_array() != 0] = removed_to_label  # set all future to 0
+            if verbose:
+                print(f"Remove components that are too small; n = {len(idxs) - k + 1} with {s} or smaller < {min_volume}")
+            result[msk] = removed_to_label
+            result[cc_arr != 0] = removed_to_label
             break
+            
+        # check max volume
         if max_volume is not None and s > max_volume:
-            arr[msk.get_array() == 1] = removed_to_label
-    return self.set_array(arr, inplace)
+            result[msk] = removed_to_label
+            
+    return result
+
+
+def postprocess_seg(seg_path: PathLike, 
+                   task_id: int, 
+                   out_path: Optional[PathLike] = None,
+                   aggressiveness: int = 1,
+                   verbose: bool = False) -> np.ndarray:
+    """
+    Let's try not using TPTBox (because we have to run in python 3.9 ToT)
+    """
+    nii_img = nib.load(seg_path)
+    img_data = nii_img.get_fdata()
+    
+    label_map = map_taskid_to_labelmaps[task_id]
+    
+    for idx, key in label_map.items():
+        if idx == 0:
+            continue
+        if key not in labels_info:
+            print(f"Warning: {key=} is not set up in the info file") if verbose else None
+            continue
+            
+        info = labels_info[key]
+        print(key) if verbose else None
+        
+        if info.get("fill", False):
+            print("Fill holes") if verbose else None
+            img_data = fill_holes_3d(img_data, idx, verbose=verbose)
+        
+        img_data = filter_connected_components(
+            img_data,
+            idx,
+            min_volume=info.get("autofix", 0) * aggressiveness,
+            max_count_component=info.get("max_cc", None),
+            verbose=verbose
+        )
+        
+        if info.get("convex_hull", 0) != 0:
+            binary = (img_data == idx)
+            eroded = erode_mask(binary, info.get("convex_hull", 0))
+            hull = calc_convex_hull(eroded, axis=2)
+            img_data[hull > 0] = idx
+    
+    if out_path is not None:
+        if isinstance(out_path, str):
+            out_path = Path(out_path)
+        nii_out = nib.Nifti1Image(img_data.astype(np.uint8), nii_img.affine, nii_img.header)
+        nib.save(nii_out, str(out_path))
+    
+        print(f'Postprocessed group {task_id}') if verbose else None
+    return img_data
 
 
 def calc_centroids_by_index(msk, label_index, decimals=1, world=False):
