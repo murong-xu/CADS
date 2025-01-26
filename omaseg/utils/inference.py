@@ -13,7 +13,6 @@ from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
 from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps, except_labels_combine
 from omaseg.dataset_utils.preprocessing import preprocess_nifti, restore_seg_in_orig_format
 from omaseg.dataset_utils.postprocessing import _do_outlier_postprocessing_groups, postprocess_seg, postprocess_head, postprocess_head_and_neck
-# from omaseg.dataset_utils.TPTBox import postprocess_seg_TPTBox
 from omaseg.utils.snapshot import generate_snapshot
 from omaseg.utils.libs import time_it, cleanup_temp_files
 
@@ -90,21 +89,20 @@ class nnUNetv2Predictor():
         if batch_predict:
             self.predict = self._nnUNetv2_batch_predict
         else:
-            self.predict = self._nnUNetv2_predict # TODO:
-            # self.predict = self.predict_from_files
+            self.predict = self._nnUNetv2_predict
 
     @time_it
     def _nnUNetv2_batch_predict(self, folder_in, folder_out):
         """
         Identical to command nnUNetv2_predict, works for batch predictions (predicting many images at once), supposed to be faster.
         """
-        # TODO: check
+        # This is suitable for processing a bunch of files, and will produce some side-files (predict_from_raw_data_args.json ...)
         self.predictor.predict_from_files(folder_in, folder_out, save_probabilities=False,
-                                          overwrite=False,
+                                          overwrite=True,
                                           num_processes_preprocessing=self.num_threads_preprocessing,
                                           num_processes_segmentation_export=self.num_threads_nifti_save,
                                           folder_with_segs_from_prev_stage=None,
-                                          num_parts=1, part_id=0)  # TODO: num_parts and part_id?
+                                          num_parts=1, part_id=0)
 
     @time_it
     def _nnUNetv2_predict(self, file_in, file_out):
@@ -138,14 +136,18 @@ def save_targets_to_nifti(save_separate_targets, output_targets_dir, affine, lab
                   basename=patient_id, original_affine=affine), targets, num_cpus=nr_threads_saving)
 
 
-def predict(files_in, folder_out, model_folder, task_ids, folds='all', preprocess_omaseg=False, postprocess_omaseg=False, save_all_combined_seg=True, snapshot=True, save_separate_targets=False, num_threads_preprocessing=1, nr_threads_saving=6, verbose=False):
+def predict(files_in, folder_out, model_folder, task_ids, folds='all', run_in_slicer=False, use_cpu=False, preprocess_omaseg=False, postprocess_omaseg=False, save_all_combined_seg=True, snapshot=True, save_separate_targets=False, num_threads_preprocessing=4, nr_threads_saving=6, verbose=False):
     """
     Loop images and use nnUNetv2 models to predict. 
     """
-    device = torch.device('cuda')
-    # multithreading in torch doesn't help nnU-Net if run on GPU
-    torch.set_num_threads(1)
-    torch.set_num_interop_threads(1)
+    if use_cpu:
+        device = torch.device('cpu') 
+    else:
+        device = torch.device('cuda')
+
+    # TODO: really need to set up torch threads?
+    # torch.set_num_threads(1)
+    # torch.set_num_interop_threads(1)
 
     labelmap_all_structure_inv = {v: k for k,
                                   v in labelmap_all_structure.items()}
@@ -168,7 +170,6 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
             patient_id = os.path.basename(file_in)[:-12]
         else:
             patient_id = os.path.basename(file_in)[:-7]
-        dataset_name = file_in.split('/')[-3]
         print("Predicting file {}/{}   ".format(i+1, len(files_in)), patient_id)
         start = time.time()
 
@@ -177,7 +178,11 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
             # Reorient to RAS, resampling to 1.5, remove rotation and translation
             temp_dir, file_in, metadata_orig, preprocessing_done = preprocess_nifti(file_in, spacing=1.5, num_threads_preprocessing=num_threads_preprocessing)
 
-        output_dir = os.path.join(folder_out, patient_id)
+        if run_in_slicer:
+            patient_id = 'segmentation'  # make the output filename general
+            output_dir = folder_out
+        else: 
+            output_dir = os.path.join(folder_out, patient_id)
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
         if save_separate_targets:
@@ -189,22 +194,21 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
         task_ids.sort()
         for task_id in task_ids:
             file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
-            models[task_id].predict(file_in, file_out)  # TODO:
-            # models[task_id].predict(file_in, file_out,
-            #                      save_probabilities=False, 
-            #                      overwrite=True,
-            #                      num_processes_preprocessing=4, num_processes_segmentation_export=1,
-            #                      folder_with_segs_from_prev_stage=None,
-            #                      num_parts=1, part_id=0)
+            # models[task_id].predict([[file_in]], [file_out])  # for batch_predict
+            models[task_id].predict(file_in, file_out)
 
             if postprocess_omaseg:
                 if task_id in _do_outlier_postprocessing_groups:
-                    #TODO: select whether to use TPTBox before running inference
-                    # postprocess_seg_TPTBox(file_out, task_id, file_out)
-                    postprocess_seg(file_out, task_id, file_out)
+                    if run_in_slicer:
+                        postprocess_seg(file_out, task_id, file_out)
+                    else:
+                        from omaseg.dataset_utils.TPTBox import postprocess_seg_TPTBox  #TODO: simplfy import
+                        postprocess_seg_TPTBox(file_out, task_id, file_out)
                 if task_id in [557, 558]:
                     file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
                     if not os.path.exists(file_seg_brain_group):
+                        print(f"Task {task_id} needs pre-segmentation from task 553, generating segmentations...")
+                        # models[553].predict([[file_in]], [file_seg_brain_group])  # for batch_predict
                         models[553].predict(file_in, file_seg_brain_group)
 
                     # For group 558, also need cervical vertebrae as reference
@@ -214,6 +218,8 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', preproces
                         if not postprocess_head_and_neck(task_id, file_seg_brain_group, None, file_out):
                             # Only predict vertebrae if brain check failed
                             if not os.path.exists(file_seg_vertebrae_group):
+                                print(f"Task {task_id} needs pre-segmentation from task 552 (spine), generating segmentations...")
+                                # models[552].predict([[file_in]], [file_seg_vertebrae_group])  # for batch_predict
                                 models[552].predict(file_in, file_seg_vertebrae_group)
                             postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
                     else:

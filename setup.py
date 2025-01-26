@@ -40,7 +40,7 @@ setup(name='OMASeg',
         ],
         entry_points={
             'console_scripts': [
-                'OMASegDummy=omaseg.scripts.predict_dummy:main'
+                'OMASegSlicer=omaseg.scripts.predict_slicer:main'
             ],
         },
     )

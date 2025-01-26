@@ -5,7 +5,8 @@ import shutil
 import zipfile
 import datetime
 from pathlib import Path
-from urllib.request import urlopen
+import requests
+from tqdm import tqdm
 
 """
 Helpers to suppress stdout prints from nnunet
@@ -41,63 +42,77 @@ def nostdout(verbose=False):
         yield
 
 
-def download_pretrained_weights(task_id):
-
-    config_dir = Path(os.path.join(os.getcwd()[:-3], 'models')) / "nnunet/results/nnUNet/3d_fullres"
-    config_dir.mkdir(exist_ok=True, parents=True)
-
-    old_weights = [
-        "Task223_my_test"
-    ]
-
-    if task_id == 251:
-        weights_path = config_dir / "Task251_TotalSegmentator_part1_organs_1139subj"
-        WEIGHTS_URL = "https://zenodo.org/record/6802342/files/Task251_TotalSegmentator_part1_organs_1139subj.zip?download=1"
-    elif task_id == 252:
-        weights_path = config_dir / "Task252_TotalSegmentator_part2_vertebrae_1139subj"
-        WEIGHTS_URL = "https://zenodo.org/record/6802358/files/Task252_TotalSegmentator_part2_vertebrae_1139subj.zip?download=1"
-    elif task_id == 253:
-        weights_path = config_dir / "Task253_TotalSegmentator_part3_cardiac_1139subj"
-        WEIGHTS_URL = "https://zenodo.org/record/6802360/files/Task253_TotalSegmentator_part3_cardiac_1139subj.zip?download=1"
-    elif task_id == 254:
-        weights_path = config_dir / "Task254_TotalSegmentator_part4_muscles_1139subj"
-        WEIGHTS_URL = "https://zenodo.org/record/6802366/files/Task254_TotalSegmentator_part4_muscles_1139subj.zip?download=1"
-    elif task_id == 255:
-        weights_path = config_dir / "Task255_TotalSegmentator_part5_ribs_1139subj"
-        WEIGHTS_URL = "https://zenodo.org/record/6802452/files/Task255_TotalSegmentator_part5_ribs_1139subj.zip?download=1"
-    elif task_id == 256:
-        weights_path = config_dir / "Task256_TotalSegmentator_3mm_1139subj"
-        WEIGHTS_URL = "https://zenodo.org/record/6802052/files/Task256_TotalSegmentator_3mm_1139subj.zip?download=1"
-
-    for old_weight in old_weights:
-        if (config_dir / old_weight).exists():
-            shutil.rmtree(config_dir / old_weight)
-
-    if WEIGHTS_URL is not None and not weights_path.exists():
-        print(f"Downloading pretrained weights for Task {task_id} (~230MB) ...")
-
-        data = urlopen(WEIGHTS_URL).read()
-        with open(config_dir / "tmp_download_file.zip", "wb") as weight_file:
-            weight_file.write(data)
-
-        with zipfile.ZipFile(config_dir / "tmp_download_file.zip", 'r') as zip_f:
-            zip_f.extractall(config_dir)
-            print(config_dir)
-
-        # delete tmp file
-        (config_dir / "tmp_download_file.zip").unlink()
-
+def get_model_weights_dir():
+    if "OMALSEG_WEIGHTS_PATH" in os.environ:
+        model_dir = Path(os.environ["OMALSEG_WEIGHTS_PATH"])
+    else:
+        home_path = Path("/tmp") if str(Path.home()) == "/" else Path.home()  # PosixPath('/Users/murong')
+        omaseg_dir = home_path / ".omaseg"
+        model_dir = omaseg_dir / "nnunet" / "results"
+        model_dir.parent.mkdir(parents=True, exist_ok=True)
+    return str(model_dir)
 
 def setup_nnunet_env():
-    config_dir = Path(os.path.join(Path(os.getcwd()).parent, 'models'))
-    (config_dir / "nnUNet/nnUNet_results").mkdir(exist_ok=True, parents=True)
-    weights_dir = config_dir / "nnUNet/nnUNet_results"
+    weights_dir = get_model_weights_dir()
 
-    # This variables will only be active during the python script execution. Therefore
-    # do not have to unset them in the end.
-    os.environ["nnUNet_raw"] = str(weights_dir)  # not needed, just needs to be an existing directory
-    os.environ["nnUNet_preprocessed"] = str(weights_dir)  # not needed, just needs to be an existing directory
+    os.environ["nnUNet_raw"] = str(weights_dir)  # not needed, placeholder
+    os.environ["nnUNet_preprocessed"] = str(weights_dir)  # not needed, placeholder
     os.environ["nnUNet_results"] = str(weights_dir)
+
+def check_or_download_model_weights(task_id):
+    weights_dir = Path(get_model_weights_dir())
+    weights_dir.mkdir(parents=True, exist_ok=True)
+    #TODO: 
+    weights_info = {
+        551: ("Dataset551_Totalseg251", ""),
+        552: ("Dataset552_Totalseg252", ""),
+        553: {"Dataset553_Totalseg253", ""},
+        554: {"Dataset554_Totalseg254", ""},
+        555: {"Dataset555_Totalseg255", ""},
+        556: {"Dataset556_GC256", ""},
+        557: {"Dataset557_Brain257", ""},
+        558: {"Dataset558_OAR258", ""},
+        559: {"Dataset559_SAROS259", ""},
+    }
+    
+    folder_name, url = weights_info[task_id]
+    weights_path = weights_dir / folder_name
+    
+    if not os.path.exists(weights_path):
+        print(f"Downloading model for Task {task_id} ...")
+
+        tempfile = weights_dir / f"tmp_download_file_{task_id}.zip"
+        try:
+            with open(tempfile, 'wb') as f:
+                response = requests.get(url, stream=True, allow_redirects=True)
+                response.raise_for_status()
+
+                total_size = int(response.headers.get('content-length', 0))
+                progress_bar = tqdm(total=total_size, unit='B', unit_scale=True, desc="Downloading")
+                for chunk in response.iter_content(chunk_size=8192 * 16):
+                    if chunk:
+                        f.write(chunk)
+                        progress_bar.update(len(chunk))
+                progress_bar.close()
+
+            print("Download finished. Extracting...")
+            with zipfile.ZipFile(tempfile, 'r') as zip_f:
+                zip_f.extractall(weights_dir)
+            print(f"Model weights extracted to {weights_path}")
+            
+        except requests.exceptions.RequestException as e:
+            print(f"Error downloading weights: {e}")
+            if os.path.exists(weights_path):
+                os.rmdir(weights_path)
+            raise
+        except zipfile.BadZipFile:
+            print("Error: Downloaded file is not a valid zip file")
+            if os.path.exists(weights_path):
+                os.rmdir(weights_path)
+            raise
+        finally:
+            if os.path.exists(tempfile):
+                os.remove(tempfile)
 
 def cleanup_temp_files(dir_to_remove):
     if os.path.exists(dir_to_remove):
