@@ -43,8 +43,8 @@ def nostdout(verbose=False):
 
 
 def get_model_weights_dir():
-    if "OMALSEG_WEIGHTS_PATH" in os.environ:
-        model_dir = Path(os.environ["OMALSEG_WEIGHTS_PATH"])
+    if "OMASEG_WEIGHTS_PATH" in os.environ:
+        model_dir = Path(os.environ["OMASEG_WEIGHTS_PATH"])
     else:
         home_path = Path("/tmp") if str(Path.home()) == "/" else Path.home()  # PosixPath('/Users/murong')
         omaseg_dir = home_path / ".omaseg"
