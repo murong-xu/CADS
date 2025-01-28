@@ -272,13 +272,15 @@ def restore_seg_in_orig_format(file_seg, metadata_orig, num_threads_preprocessin
     orig_affine = metadata_orig['affine']
 
     # Resampling
-    seg_resampled = change_spacing(seg_preprocessed, orig_spacing, order=0, dtype=np.int32, nr_cpus=num_threads_preprocessing)
+    abs_spacing = np.abs(orig_spacing)
+    seg_resampled = change_spacing(seg_preprocessed, abs_spacing, order=0, dtype=np.int32, nr_cpus=num_threads_preprocessing)
 
     # Reorientation
     orig_orientation = tuple(determine_orientation(orig_affine))
     seg_reoriented= reorient_to(seg_resampled.get_fdata(), seg_resampled.affine, orig_orientation, verb=True)
 
     # Bring back tranlsation
+    seg_reoriented.affine[:3, :3] = orig_affine[:3, :3] 
     seg_reoriented.affine[:, -1] = orig_affine[:, -1]
     seg_restored = nib.Nifti1Image(seg_reoriented.get_fdata().astype(np.uint8), seg_reoriented.affine)
     nib.save(seg_restored, file_seg)
