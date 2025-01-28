@@ -225,6 +225,12 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', run_in_sl
                     else:
                         postprocess_head(task_id, file_seg_brain_group, file_out)
 
+        # reverse pre-processing
+        for task_id in task_ids:
+            file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
+            if preprocess_omaseg and preprocessing_done:
+                restore_seg_in_orig_format(file_out, metadata_orig, num_threads_preprocessing=num_threads_preprocessing)
+
         # Combine all classes into a single segmentation nii file
         if save_all_combined_seg:
             init = False
@@ -263,10 +269,6 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', run_in_sl
                 generate_snapshot(file_in, file_seg_combined, file_snapshot)
             except FileNotFoundError as e:
                 print(f"Error: {e}")
-        
-        # reverse pre-processing
-        if preprocess_omaseg and preprocessing_done:
-            restore_seg_in_orig_format(file_out, metadata_orig, num_threads_preprocessing=num_threads_preprocessing)
 
         if temp_dir:
             cleanup_temp_files(temp_dir)
