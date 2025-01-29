@@ -16,7 +16,7 @@ def dicom_to_nifti(dicom_folder, savenifti=False, output_file=None):
     slices.sort(key=lambda x: float(x.ImagePositionPatient[2]))  # Sort by slice position
     
     # Extract the pixel data and stack into a 3D array
-    pixel_arrays = [s.pixel_array for s in slices]
+    pixel_arrays = [pydicom.pixels.apply_modality_lut(s.pixel_array, s) for s in slices]  # need to convert to HU (otherwise pydicom.dcmread will read intensity from [0, ])
     image_3d = np.stack(pixel_arrays, axis=-1)
     image_3d = np.transpose(image_3d, (1, 0, 2))  # important: by default DICOM's pixel_array is stored in (row -> P/A, column -> L/R), in order to have LPS it needs to transpose dim 0 and 1. 
 
