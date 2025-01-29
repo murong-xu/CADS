@@ -231,6 +231,9 @@ def preprocess_nifti(file_in, spacing=1.5, num_threads_preprocessing=2):
     original_affine = raw_img.affine
     original_spacing = np.diag(original_affine, k=0)[:3]
     original_orientation = nio.ornt2axcodes(nio.io_orientation(original_affine))
+    original_x_size = raw_img_numpy.shape[0]
+    original_y_size = raw_img_numpy.shape[1]
+    original_z_size = raw_img_numpy.shape[2]
 
     # If both spacing and orientation are correct, return original image
     if np.all(np.isclose(original_spacing, spacing)) and original_orientation == ('R', 'A', 'S') and np.allclose(original_affine[:, -1], np.array([0, 0, 0, 1])):
@@ -259,7 +262,10 @@ def preprocess_nifti(file_in, spacing=1.5, num_threads_preprocessing=2):
 
         metadata_orig = {
             'affine': original_affine,
-            'spacing': original_spacing
+            'spacing': original_spacing,
+            'x_size': original_x_size,
+            'y_size': original_y_size,
+            'z_size': original_z_size,
         }
         return temp_subdir, temp_path, metadata_orig, True
     
@@ -273,7 +279,10 @@ def restore_seg_in_orig_format(file_seg, metadata_orig, num_threads_preprocessin
 
     # Resample to original spacing (using absolute values for zoom)
     abs_spacing = np.abs(orig_spacing)
-    seg_resampled = change_spacing(seg_preprocessed, abs_spacing, order=0, 
+    orig_shape = (metadata_orig['x_size'], 
+                 metadata_orig['y_size'], 
+                 metadata_orig['z_size'])
+    seg_resampled = change_spacing(seg_preprocessed, abs_spacing, target_shape=orig_shape, order=0, 
                                  dtype=np.int32, nr_cpus=num_threads_preprocessing)
 
     # Reorient to original orientation
