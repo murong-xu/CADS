@@ -587,6 +587,7 @@ except_labels_combine = [
 
 # Structures not included in TotalSegmentator v2
 totalseg_exclude_to_compare = [
+    'Larynx', 
     'Psoas major R',
     'Psoas major L',
     'Rectus abdominis R',
