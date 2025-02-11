@@ -78,6 +78,35 @@ def select_files_total_seg(datasetname, split):
     print(f'Number of selected images in split ({split}): {len(folder_ids)}')
     return folders, folder_ids, folder_split
 
+def select_files_total_seg_corrected(datasetname, split, labelsfolder):
+    """
+    After rib (255) and vertebrae (252) correction. 
+    """
+    ctfolder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_ready_1mm'
+    ct_data_dir = os.path.join(ctfolder, datasetname, 'images')
+
+    json_files = glob.glob(ct_data_dir + '/*.json')
+    json_files.sort()
+
+    folder_ids = []
+    folders = []
+    folder_split = []
+    for jsonfile in json_files:
+        file = open(jsonfile)
+        metadata = json.load(file)
+        file.close()
+        if metadata["train"] == split:  # 1 train 0 test 2 validation
+            base = os.path.basename(jsonfile).split('.')[0][:-5]
+            labelfolder = os.path.join(labelsfolder, base)
+            if os.path.exists(labelfolder):
+                folder_ids.append(base)
+                folders.append(os.path.join(labelsfolder, base))
+                folder_split.append(metadata["train"])
+
+    print(f'Number of selected images in split ({split}): {len(folder_ids)}')
+    print(f'Using label folder: {labelsfolder}')
+    return folders, folder_ids, folder_split
+
 
 def select_labels_from_gt_data(folder, datasetname, gt_datasetname, split):
     labelsfolder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/gt_data'

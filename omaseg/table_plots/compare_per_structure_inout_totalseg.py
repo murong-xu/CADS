@@ -13,7 +13,7 @@ output_folder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/compare_to
 analysis_name = '1000_post_vs_roirobust_stat_tests_with_benjamini'
 
 experiment_results_path = {
-    'omaseg': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/final_models/scores_postprocessed/test_0',
+    'omaseg': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/final_models/scores_final/test_0',
     'totalsegmentator': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
 }
 

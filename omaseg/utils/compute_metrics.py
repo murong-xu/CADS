@@ -12,7 +12,7 @@ from omaseg.dataset_utils.datasets_labelmap import dataset2labelmap, dataset2lab
 from omaseg.dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
 from omaseg.dataset_utils.mappings import replace_labelmap, map_labels, replacements, FULLY_ANNOTATED_DATASETS, TOL_MISSING_VOLLUME_PERCENTAGE
 from omaseg.dataset_utils.postprocessing_for_eval import PostprocessingMetric, RecalculateAvgOrganVolume
-from omaseg.dataset_utils.select_files import select_labels, select_files_total_seg, select_labels_from_gt_data
+from omaseg.dataset_utils.select_files import select_labels, select_files_total_seg, select_labels_from_gt_data, select_files_total_seg_corrected
 
 from omaseg.utils.metrics import compute_max_HD_distance, save_metric, save_missing_structure_check
 from omaseg.utils.libs import time_it
@@ -265,6 +265,8 @@ def compute_metrics_totalseg(input_dir, output_folder, path_avg_organ_volume, sp
 
     gtfolders, ids, splits = select_files_total_seg(
         datasetname=dataset, split=split)
+    # gtfolders, ids, splits = select_files_total_seg_corrected(
+    #     datasetname=dataset, split=split, labelsfolder=labelsfolder)
     if parts == 'all':
         parts = np.arange(551, 556)
 

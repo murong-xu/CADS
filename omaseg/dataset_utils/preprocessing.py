@@ -6,6 +6,7 @@ import nibabel.orientations as nio
 from scipy import ndimage
 import psutil
 from joblib import Parallel, delayed
+import pickle
 
 
 def get_metadata(img_nib):
@@ -294,4 +295,75 @@ def restore_seg_in_orig_format(file_seg, metadata_orig, num_threads_preprocessin
     seg_restored = nib.Nifti1Image(seg_reoriented.get_fdata().astype(np.uint8), 
                                   orig_affine)
     
+    nib.save(seg_restored, file_seg)
+
+
+def preprocess_nifti_ctrate(raw_img, output_filename, spacing=1.5, num_threads_preprocessing=2):
+    raw_img_numpy = raw_img.get_fdata()
+    
+    original_affine = raw_img.affine
+    original_spacing = np.diag(original_affine, k=0)[:3]
+    original_x_size = raw_img_numpy.shape[0]
+    original_y_size = raw_img_numpy.shape[1]
+    original_z_size = raw_img_numpy.shape[2]
+
+    # Reorient to RAS
+    img_reoriented = reorient_to(raw_img_numpy, original_affine, axcodes_to=('R', 'A', 'S'), verb=True)
+
+    # Resampling to 1.5
+    img_resampled = change_spacing(img_reoriented, [spacing, spacing, spacing], order=3, dtype=np.int32, nr_cpus=num_threads_preprocessing)
+    
+    # Remove rotation & translation
+    affine_removed = remove_rotation_and_translation(img_resampled.affine)
+    img_removed = nib.Nifti1Image(img_resampled.get_fdata(), affine_removed)
+
+    # Create temp file path and save
+    output_folder = os.path.dirname(output_filename)
+    basename = os.path.basename(output_filename).split('.nii.gz')[0]
+    nib.save(img_removed, output_filename)
+
+    metadata_orig = {
+        'affine': original_affine,
+        'spacing': original_spacing,
+        'x_size': original_x_size,
+        'y_size': original_y_size,
+        'z_size': original_z_size,
+    }
+    metadata_file = os.path.join(output_folder, f'{basename}_metadata.pkl')
+    with open(metadata_file, 'wb') as f:
+        pickle.dump(metadata_orig, f)
+        f.close()
+    
+
+def restore_seg_in_orig_format_ctrate(file_seg, metadata_orig, num_threads_preprocessing=2):
+    affine_identity = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1]
+        ], dtype=np.float32)
+    print('Restore the segmentation to original format...')
+
+    seg_preprocessed = nib.load(file_seg)
+    orig_spacing = metadata_orig['spacing']
+    orig_affine = metadata_orig['affine']
+
+    # Resample to original spacing (using absolute values for zoom)
+    abs_spacing = np.abs(orig_spacing)
+    orig_shape = (metadata_orig['x_size'], 
+                 metadata_orig['y_size'], 
+                 metadata_orig['z_size'])
+    seg_resampled = change_spacing(seg_preprocessed, abs_spacing, target_shape=orig_shape, order=0, 
+                                 dtype=np.int32, nr_cpus=num_threads_preprocessing)
+
+    # Reorient to original orientation
+    orig_orientation = nio.ornt2axcodes(nio.io_orientation(orig_affine))
+    seg_reoriented = reorient_to(seg_resampled.get_fdata(), seg_resampled.affine, 
+                                orig_orientation, verb=True)
+    
+    # Restore final segmentation with exactly the original affine matrix (translation etc.)
+    seg_restored = nib.Nifti1Image(seg_reoriented.get_fdata().astype(np.uint8), 
+                                  affine_identity)
+
     nib.save(seg_restored, file_seg)

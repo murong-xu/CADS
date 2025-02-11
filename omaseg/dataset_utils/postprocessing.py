@@ -5,8 +5,6 @@ import nibabel.orientations as nio
 from scipy.ndimage.measurements import center_of_mass
 from scipy import ndimage
 from typing import Sequence, Union, Optional, List
-import cc3d
-import cv2
 
 PathLike = Union[str, Path]
 LabelType = Union[int, List[int]]
@@ -147,6 +145,7 @@ def get_largest_k_connected_components(
     Returns:
         np.ndarray: array with the largest k connected components
     """
+    import cc3d
     # Input validation
     assert k is None or k > 0
     assert 2 <= arr.ndim <= 3, f"expected 2D or 3D, but got {arr.ndim}"
@@ -302,6 +301,7 @@ def erode_mask(img_data: np.ndarray,
     return result
 
 def calc_convex_hull(img_data: np.ndarray, axis: Optional[int] = None) -> np.ndarray:
+    import cv2
     result = img_data.copy()
     binary = result > 0
     

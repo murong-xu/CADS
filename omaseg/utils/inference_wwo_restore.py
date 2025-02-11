@@ -7,11 +7,13 @@ import numpy as np
 import nibabel as nib
 from functools import partial
 from p_tqdm import p_map
+import pickle
 from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
+from omaseg.dataset_utils.TPTBox import postprocess_seg_TPTBox
 
 from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, map_taskid_to_labelmaps, except_labels_combine
-from omaseg.dataset_utils.preprocessing import preprocess_nifti, restore_seg_in_orig_format
+from omaseg.dataset_utils.preprocessing import preprocess_nifti, restore_seg_in_orig_format, restore_seg_in_orig_format_ctrate
 from omaseg.dataset_utils.postprocessing import _do_outlier_postprocessing_groups, postprocess_head, postprocess_head_and_neck
 from omaseg.utils.snapshot import generate_snapshot
 from omaseg.utils.libs import time_it, cleanup_temp_files
@@ -200,10 +202,9 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', run_in_sl
             if postprocess_omaseg:
                 if task_id in _do_outlier_postprocessing_groups:
                     if run_in_slicer:
-                        from omaseg.dataset_utils.postprocessing import postprocess_seg
                         postprocess_seg(file_out, task_id, file_out)
                     else:
-                        from omaseg.dataset_utils.TPTBox import postprocess_seg_TPTBox  #TODO: simplfy import
+                        # from omaseg.dataset_utils.TPTBox import postprocess_seg_TPTBox  #TODO: simplfy import
                         postprocess_seg_TPTBox(file_out, task_id, file_out)
                 if task_id in [557, 558]:
                     file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
@@ -274,3 +275,115 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', run_in_sl
         if temp_dir:
             cleanup_temp_files(temp_dir)
         print(f"Finished in {time.time() - start:.2f}s")
+
+
+def predict_ct_rate_without_restore(files_in, model_folder, task_ids, folds='all', run_in_slicer=False, use_cpu=False, preprocess_omaseg=False, postprocess_omaseg=False, save_all_combined_seg=True, snapshot=True, save_separate_targets=False, num_threads_preprocessing=4, nr_threads_saving=6, verbose=False):
+    """
+    Loop images and use nnUNetv2 models to predict. 
+    """
+    if use_cpu:
+        device = torch.device('cpu') 
+    else:
+        device = torch.device('cuda')
+
+    # TODO: really need to set up torch threads?
+    # torch.set_num_threads(1)
+    # torch.set_num_interop_threads(1)
+
+    labelmap_all_structure_inv = {v: k for k,
+                                  v in labelmap_all_structure.items()}
+
+    # Init nnUNetv2 predictor
+    models = {}
+    for task_id in task_ids:
+        models[task_id] = nnUNetv2Predictor(model_folder, task_id, device, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth',
+                                            num_threads_preprocessing=num_threads_preprocessing, num_threads_nifti_save=nr_threads_saving, verbose=verbose)
+    if any(task in task_ids for task in [557, 558]) and 553 not in task_ids:
+        models[553] = nnUNetv2Predictor(model_folder, 553, device, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth',
+                                            num_threads_preprocessing=num_threads_preprocessing, num_threads_nifti_save=nr_threads_saving, verbose=verbose)
+    if 558 in task_ids and 552 not in task_ids:
+        models[552] = nnUNetv2Predictor(model_folder, 552, device, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth',
+                                            num_threads_preprocessing=num_threads_preprocessing, num_threads_nifti_save=nr_threads_saving, verbose=verbose)
+
+    # Loop images
+    for i, file_in in enumerate(files_in):
+        patient_id = os.path.basename(file_in)[:-7]
+        print("Predicting file {}/{}   ".format(i+1, len(files_in)), patient_id)
+        start = time.time()
+
+        output_dir = os.path.join(os.path.dirname(file_in), patient_id)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+
+        # Inference and save segmentations: loop 9x models
+        task_ids.sort()
+        for task_id in task_ids:
+            file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
+            # models[task_id].predict([[file_in]], [file_out])  # for batch_predict
+            models[task_id].predict(file_in, file_out)
+
+            if postprocess_omaseg:
+                if task_id in _do_outlier_postprocessing_groups:
+                    postprocess_seg_TPTBox(file_out, task_id, file_out)
+                if task_id in [557, 558]:
+                    file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
+                    if not os.path.exists(file_seg_brain_group):
+                        print(f"Task {task_id} needs pre-segmentation from task 553, generating segmentations...")
+                        # models[553].predict([[file_in]], [file_seg_brain_group])  # for batch_predict
+                        models[553].predict(file_in, file_seg_brain_group)
+
+                    # For group 558, also need cervical vertebrae as reference
+                    if task_id == 558:
+                        file_seg_vertebrae_group = os.path.join(output_dir, patient_id+'_part_'+str(552)+'.nii.gz')
+                        # First check if brain exists and is sufficient
+                        if not postprocess_head_and_neck(task_id, file_seg_brain_group, None, file_out):
+                            # Only predict vertebrae if brain check failed
+                            if not os.path.exists(file_seg_vertebrae_group):
+                                print(f"Task {task_id} needs pre-segmentation from task 552 (spine), generating segmentations...")
+                                # models[552].predict([[file_in]], [file_seg_vertebrae_group])  # for batch_predict
+                                models[552].predict(file_in, file_seg_vertebrae_group)
+                            postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
+                    else:
+                        postprocess_head(task_id, file_seg_brain_group, file_out)
+
+        print(f"Finished in {time.time() - start:.2f}s")
+
+
+def predict_ct_rate_only_restore(files_in, model_folder, task_ids, folds='all', run_in_slicer=False, use_cpu=False, preprocess_omaseg=False, postprocess_omaseg=False, save_all_combined_seg=True, snapshot=True, save_separate_targets=False, num_threads_preprocessing=4, nr_threads_saving=6, verbose=False):
+    """
+    Loop images and use nnUNetv2 models to predict. 
+    """
+    if use_cpu:
+        device = torch.device('cpu') 
+    else:
+        device = torch.device('cuda')
+
+    # TODO: really need to set up torch threads?
+    # torch.set_num_threads(1)
+    # torch.set_num_interop_threads(1)
+
+    labelmap_all_structure_inv = {v: k for k,
+                                  v in labelmap_all_structure.items()}
+
+    # Loop images
+    for i, file_in in enumerate(files_in):
+        patient_id = os.path.basename(file_in)[:-7]
+        print("Restoring file {}/{}   ".format(i+1, len(files_in)), patient_id)
+        start = time.time()
+
+        output_dir = os.path.join(os.path.dirname(file_in), patient_id)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+
+        # reverse pre-processing
+        metadata_path = os.path.join(os.path.dirname(file_in), f'{patient_id}_metadata.pkl')
+        with open(metadata_path, 'rb') as f:
+            metadata_orig = pickle.load(f)
+            f.close()
+        for task_id in task_ids:
+            file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
+            restore_seg_in_orig_format_ctrate(file_out, metadata_orig, num_threads_preprocessing=num_threads_preprocessing)
+
+        print(f"Finished in {time.time() - start:.2f}s")
+        os.remove(file_in)
+        os.remove(metadata_path)
