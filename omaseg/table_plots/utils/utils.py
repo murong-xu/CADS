@@ -186,6 +186,40 @@ def check_normality(differences, alpha=0.05):
 
 def check_distribution_perform_stat_test(scores1, scores2, alpha=0.05, higher_better=True):
     differences = np.array(scores1) - np.array(scores2)
+
+    # special handling for single-element lists (both stst. tests not applicable)
+    if len(scores1) == 1 and len(scores2) == 1:
+        if scores1[0] == scores2[0]:
+            # when values are identical
+            return {
+                'test_type': 'Single value comparison',
+                'statistic': 0,
+                'p_value': 1.0,
+                'effect_size': 0,
+                'effect_size_type': 'Direct difference',
+                'is_normal': None,
+                'normality_p': None,
+                'better_model': None,
+                'mean_difference': 0,
+                'pos_diff': 0,
+                'neg_diff': 0
+            }
+        else:
+            # when values are different
+            diff = scores1[0] - scores2[0]
+            return {
+                'test_type': 'Single value comparison',
+                'statistic': abs(diff),
+                'p_value': 0.0 if abs(diff) > 0 else 1.0,
+                'effect_size': diff,
+                'effect_size_type': 'Direct difference',
+                'is_normal': None,
+                'normality_p': None,
+                'better_model': None,
+                'mean_difference': diff,
+                'pos_diff': 1 if diff > 0 else 0,
+                'neg_diff': 1 if diff < 0 else 0
+            }
     
     # check distribution
     is_normal, normality_p = check_normality(differences, alpha)
