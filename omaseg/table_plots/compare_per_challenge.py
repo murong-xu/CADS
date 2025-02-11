@@ -10,11 +10,11 @@ experiment_to_name_dict = {
     'totalsegmentator': 'TotalSeg',
 }
 experiment_results_path = {
-    'omaseg': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/final_models/scores_postprocessed/test_0',
-    'totalsegmentator': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
+    'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT/test_0',
+    'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT/test_0',
 }
-output_folder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/compare_totalseg_omaseg/per-challenge'
-analysis_name = '1000_post_vs_roirobust_more_stat_tests'
+output_folder = '/mnt/hdda/murong/22k/results/compare_totalseg_omaseg'
+analysis_name = 'filtered_unreliable_and_limited_fov'
 
 datasets_eval = [
     '0001_visceral_gc',
@@ -101,7 +101,7 @@ for prefix in prefixes:
             results_models['omaseg'], results_models['totalsegmentator'], alpha=significance_level, higher_better=higher_better)
 
         # Highlight best scores
-        output_compare_folder = os.path.join(output_folder, analysis_name)
+        output_compare_folder = os.path.join(output_folder, analysis_name, 'per-challenge')
         if not os.path.exists(output_compare_folder):
             os.makedirs(output_compare_folder)
         filename = os.path.join(output_compare_folder, f'{prefix}_{dataset}.xlsx')

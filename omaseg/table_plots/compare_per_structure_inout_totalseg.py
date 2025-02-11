@@ -9,12 +9,12 @@ from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, lab
 
 
 # TODO: param
-output_folder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/compare_totalseg_omaseg'
-analysis_name = '1000_post_vs_roirobust_stat_tests_with_benjamini'
+output_folder = '/mnt/hdda/murong/22k/results/compare_totalseg_omaseg'
+analysis_name = 'filtered_unreliable_and_limited_fov'
 
 experiment_results_path = {
-    'omaseg': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/final_models/scores_final/test_0',
-    'totalsegmentator': '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
+    'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT/test_0',
+    'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT/test_0',
 }
 
 prefixes = ['dice', 'hd95', 'hd', 'normalized_distance']
@@ -24,9 +24,9 @@ significance_level = 0.05 #TODO: test more values
 filter_transitional_in_verse = True
 exclude_face_from_overall_score = True
 
-path_count_GT_number = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/per_structure_GT_image_counts.pkl'
-path_count_GT_from_totalseg_number = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/per_structure_GT_image_from_totalseg_counts.pkl'
-path_count_GT_volume = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/results/per_structure_GT_volume_clipped_avg_counts.pkl'
+path_count_GT_number = '/mnt/hdda/murong/22k/results/per_structure_GT_image_counts.pkl'
+path_count_GT_from_totalseg_number = '/mnt/hdda/murong/22k/results/per_structure_GT_image_from_totalseg_counts.pkl'
+path_count_GT_volume = '/mnt/hdda/murong/22k/results/per_structure_GT_volume_clipped_avg_counts.pkl'
 
 experiment_to_name_dict = {
     'omaseg': 'OMASeg',
