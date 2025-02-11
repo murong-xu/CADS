@@ -10,7 +10,7 @@ def filter_rows(dataframe, splits=['test']):
     split_dict = {'test': 0, 'train': 1, 'val': 2}
     splits = [split_dict.get(split, 0) for split in splits]
     dataframe = dataframe.drop(dataframe.index[-1])  # drop the last avg row
-    mask = (dataframe != -1) & (dataframe != -2) & (dataframe != -3)
+    mask = (dataframe != -1) & (dataframe != -2) & (dataframe != -3) & (dataframe != -4)
     dataframe = dataframe.where(mask, np.nan)
 
     # Replace numeric values greater than 1000 with NaN, BUT can't do this, we have FN penalizations
