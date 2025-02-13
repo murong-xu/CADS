@@ -22,13 +22,15 @@ setup(name='OMASeg',
             'tqdm>=4.45.0',
             'p_tqdm',
             'xvfbwrapper',
-            'nnunetv2>=2.5.1',
+            'nnunetv2==2.5.1',
             'requests==2.27.1;python_version<"3.10"',
             'requests;python_version>="3.10"',
             'rt_utils',
             'dicom2nifti',
-            'pyarrow',
-            'psutil'
+            'pyarrow', 
+            'psutil',
+            'TPTBox;python_version>="3.10"',
+            'opencv-python;python_version<"3.10"'
         ],
         zip_safe=False,
         classifiers=[
