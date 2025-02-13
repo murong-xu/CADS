@@ -254,8 +254,8 @@ def preprocess_nifti(file_in, spacing=1.5, num_threads_preprocessing=2):
         img_removed = nib.Nifti1Image(img_resampled.get_fdata(), affine_removed)
 
         # Create temp file path and save
-        temp_dir = tempfile.gettempdir()
-        temp_subdir = os.path.join(temp_dir, 'omaseg_inference')
+        temp_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        temp_subdir = os.path.join(temp_dir, 'omaseg', 'temp_results')
         os.makedirs(temp_subdir, exist_ok=True)
         basename = os.path.basename(file_in).split('.nii.gz')[0]
         temp_path = os.path.join(temp_subdir, f"{basename}_preprocessed.nii.gz")
