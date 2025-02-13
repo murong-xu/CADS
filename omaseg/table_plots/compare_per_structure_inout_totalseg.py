@@ -5,11 +5,12 @@ import pickle
 from collections import defaultdict
 
 from omaseg.table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids, bootstrap_ci, check_distribution_perform_stat_test, benjamini_hochberg_correction
-from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed, totalseg_exclude_to_compare
+from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed, totalseg_exclude_to_compare, structure_to_in_dist_training_dataset
 
 
 # TODO: param
 output_folder = '/mnt/hdda/murong/22k/results/compare_totalseg_omaseg'
+grouping_in_out_dist = 'group_by_omaseg_inout'  # 'group_by_omaseg_inout'/'group_by_totalseg_dataset'
 analysis_name = 'filtered_unreliable_and_limited_fov'
 
 experiment_results_path = {
@@ -96,12 +97,20 @@ for prefix in prefixes:
                 matching_columns = [
                     column for column in column_names if s == column]
                 if len(matching_columns) > 0:
-                    # Decide the current structure belongs to totalsegmentator or not
-                    structure_is_in_dist = True  # Totalseg data
                     datasetname = file.split('/')[-2]
-
-                    if '0037_totalsegmentator' != datasetname:
-                        structure_is_in_dist = False
+                    if grouping_in_out_dist == 'group_by_omaseg_inout':
+                        # decide the current structure belongs to its training group or not 
+                        structure_id = str([k for k, v in labelmap_all_structure.items() if v == s][0])
+                        structure_is_in_dist = (datasetname == structure_to_in_dist_training_dataset[structure_id])
+                    elif grouping_in_out_dist == 'group_by_totalseg_dataset':
+                        # decide the current structure belongs to totalseg dataset or not 
+                        if '0037_totalsegmentator' == datasetname:
+                            structure_is_in_dist = True
+                        else:
+                            structure_is_in_dist = False
+                    else:
+                        print("Error, select one of the following: group_by_omaseg_inout / group_by_totalseg_dataset")
+                        exit()
 
                     for column in matching_columns:
                         values = df[column].to_list()  # Drop NA later
@@ -319,7 +328,7 @@ for prefix in prefixes:
     columns = columns_extra_info + [col for col in output_df.columns if col not in columns_extra_info]
     output_df = output_df[columns]
 
-    output_compare_folder = os.path.join(output_folder, analysis_name)
+    output_compare_folder = os.path.join(output_folder, grouping_in_out_dist, analysis_name)
     if not os.path.exists(output_compare_folder):
         os.makedirs(output_compare_folder)
     filename = os.path.join(output_compare_folder, f'{prefix}_compare_table.xlsx')

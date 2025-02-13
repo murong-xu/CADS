@@ -563,6 +563,23 @@ labelmap_all_structure_renamed = {
     167: 'Spinal cord',
 }
 
+structure_to_in_dist_training_dataset = {
+    # TotalSegmentator structures (1-104)
+    **{str(i): '0037_totalsegmentator' for i in range(1, 105)},
+    
+    # Visceral structures (105-119)
+    **{str(i): '0001_visceral_gc_new' for i in range(105, 120)},
+    
+    # Han-Seg-Reg structures (120-128)
+    **{str(i): '0039_han_seg_reg' for i in range(120, 129)},
+    
+    # Han-Seg structures (129-157)
+    **{str(i): '0039_han_seg' for i in range(129, 158)},
+    
+    # SAROS structures (158-167)
+    **{str(i): '0040_saros' for i in range(158, 168)}
+}
+
 except_labels_combine = [
     'background',
     'brain',  # place for gray-white matter
