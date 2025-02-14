@@ -33,6 +33,10 @@ totalseg_scores = {
 
 # TODO: fill in the param below
 table_names = ['liver', 'spleen', 'inferior_vena_cava']  # TODO
+# table_names = ['Brainstem', 'Eye_L', 'Eye_R', 'Larynx', 'OpticNerve_L', 'OpticNerve_R', 'Parotid_L', 'Parotid_R', 
+#                'SubmandibularGland_L', 'SubmandibularGland_R', 'Aorta', 'Bladder', 'Brain', 'Esophagus',
+#                'Humerus_L', 'Humerus_R', 'Kidney_L', 'Kidney_R', 'Liver', 'Lung_L', 'Lung_R', 'Prostate',
+#                'SpinalCord', 'Spleen', 'Stomach', 'Thyroid', 'Trachea', 'V_CavaInferior', 'Heart']
 output_folder = '/mnt/hdda/murong/22k/debug/usz_results_analyasis'  # TODO
 analysis_name = 'result_analysis_example'  # TODO
 prefixes = ['Dice', 'NormSurfDice', 'HD', 'HD95']  # TODO
@@ -60,6 +64,18 @@ omaseg_image_paths = set(path.rsplit('/', 1)[0] for path in omaseg_scores.keys()
 totalseg_image_paths = set(path.rsplit('/', 1)[0] for path in totalseg_scores.keys())
 if len(omaseg_image_paths) != len(totalseg_image_paths):
     print("Error, the number of subjects in TotalSeg and OMASeg are not the same")
+    exit()
+organ_names_in_results_dict = set(key.rsplit('/', 1)[1] for key in omaseg_scores.keys())
+table_names_set = set(table_names)
+if organ_names_in_results_dict != table_names_set:
+    # Find differences
+    missing_in_dict = table_names_set - organ_names_in_results_dict
+    extra_in_dict = organ_names_in_results_dict - table_names_set
+    
+    if missing_in_dict:
+        print(f"Organs in table_names but not in results dictionary: {sorted(missing_in_dict)}")
+    if extra_in_dict:
+        print(f"Organs in resuylts dictionary but not in table_names: {sorted(extra_in_dict)}")
     exit()
 
 image_paths = omaseg_image_paths
@@ -197,20 +213,23 @@ for prefix in prefixes:
     d[f'Significant After Correction'] = stat_df['Significant After Correction']
 
     for experiment, data in experiments_dicts.items():
-        stats = {'mean±std': [], '95% CI': [], 'IQR': []}
+        stats = {'mean±std': [], 'median': [], '95% CI': [], 'IQR': []}
         category_stats = {'score': [], '95% CI': [], 'IQR': []}
         category_means[experiment] = {}
         for structure, values in data.items():
             if experiment == 'TotalSeg' and structure in totalseg_exclude_to_compare:
                 stats['mean±std'].append(None)
+                stats['median'].append(None)
                 stats['95% CI'].append(None)
                 stats['IQR'].append(None)
             elif not values:
                 stats['mean±std'].append(None)
+                stats['median'].append(None)
                 stats['95% CI'].append(None)
                 stats['IQR'].append(None)
             else:
                 mean, std = np.mean(values), np.std(values)
+                median = np.median(values)
                 Q1 = np.percentile(values, 25)
                 Q3 = np.percentile(values, 75)
                 IQR = Q3 - Q1
@@ -218,9 +237,11 @@ for prefix in prefixes:
                 if mean == 0 and std == 0:
                     # Changed from "0±0" to None
                     stats['mean±std'].append(None)
+                    stats['median'].append(None)
                     stats['95% CI'].append(None)
                 else:
                     stats['mean±std'].append(f"{mean:.4f}±{std:.4f}")
+                    stats['median'].append(f"{median:.4f}")
                     lower, upper = bootstrap_ci(values)
                     stats['95% CI'].append(f"({lower:.4f}, {upper:.4f})")
                 all_scores.extend(values)
@@ -230,6 +251,7 @@ for prefix in prefixes:
             category_stats['IQR'].append(stats['IQR'][-1])
 
         d[f'{experiment} mean'] = stats['mean±std']
+        d[f'{experiment} median'] = stats['median']
         d[f'{experiment} 95% CI'] = stats['95% CI']
         d[f'{experiment} IQR'] = stats['IQR']
 
