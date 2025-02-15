@@ -2,89 +2,90 @@ import numpy as np
 import pandas as pd
 import os
 from collections import defaultdict
+import json
 
 from omaseg.table_plots.utils.utils import align_and_filter_scores, bootstrap_ci, check_distribution_perform_stat_test, benjamini_hochberg_correction
 
-# Assume we have scores saved in data structure as below
-# Assume for every image, all targets are created in sub-dictionaries, even though sometimes they don't present on that image
-omaseg_scores = {
-    'path_1/liver': {'TPR': 0.1, 'FPR': 0.1, 'Dice': 0.8, 'NormSurfDice': 0.85, 'HD': 1.5, 'HD95': 1.5},
-    'path_1/spleen': {'TPR': 0.0, 'FPR': 0.0, 'Dice': 0.9, 'NormSurfDice': 0.76, 'HD': 3.0, 'HD95': 3.0},
-    'path_1/inferior_vena_cava': {'TPR': 0.2, 'FPR': 0.3, 'Dice': 0.3, 'NormSurfDice': 0.66, 'HD': 11.2, 'HD95': 11.0},
-    'path_2/liver': {'TPR': 0.12, 'FPR': 0.18, 'Dice': 0.9, 'NormSurfDice': 0.9, 'HD': 10.5, 'HD95': 1.5},
-    'path_2/spleen': {'TPR': 0.02, 'FPR': 0.06, 'Dice': 0.86, 'NormSurfDice': 0.98, 'HD': 100.5, 'HD95': 1.5},
-    'path_3/liver': {'TPR': 0.03, 'FPR': 0.02, 'Dice': 0.82, 'NormSurfDice': 0.75, 'HD': 1000.5, 'HD95': 1.5},
-    'path_3/spleen': {'TPR': 0.15, 'FPR': 0.18, 'Dice': 0.98, 'NormSurfDice': 0.56, 'HD': 12.5, 'HD95': 6.5},
-    'path_3/inferior_vena_cava': {'TPR': 0.6, 'FPR': 0.1, 'Dice': 0.82, 'NormSurfDice': 0.66, 'HD': 1.5, 'HD95': 1.5},
-    'path_4/liver': {'TPR': 0.2, 'FPR': 0.1, 'Dice': 0.72, 'NormSurfDice': 0.92, 'HD': 1.5, 'HD95': 1.5}
-}
-totalseg_scores = {
-    'path_1/liver': {'TPR': 0.8, 'FPR': 0.8, 'Dice': 0.9, 'NormSurfDice': 0.1, 'HD': 1.5, 'HD95': 1.5},
-    'path_1/spleen': {'TPR': 0.0, 'FPR': 0.0, 'Dice': 0.1, 'NormSurfDice': 0.1, 'HD': 3.0, 'HD95': 3.0},
-    'path_1/inferior_vena_cava': {'TPR': 0.2, 'FPR': 0.3, 'Dice': 0.9, 'NormSurfDice': 0.9, 'HD': 11.2, 'HD95': 11.0},
-    'path_2/liver': {'TPR': 0.12, 'FPR': 0.18, 'Dice': 0.9, 'NormSurfDice': 0.9, 'HD': 10.5, 'HD95': 1.5},
-    'path_2/spleen': {'TPR': 0.02, 'FPR': 0.06, 'Dice': 0.86, 'NormSurfDice': 0.98, 'HD': 100.5, 'HD95': 1.5},
-    'path_3/liver': {'TPR': 0.03, 'FPR': 0.02, 'Dice': 0.82, 'NormSurfDice': 0.75, 'HD': 1000.5, 'HD95': 1.5},
-    'path_3/spleen': {'TPR': None, 'FPR': None, 'Dice': None, 'NormSurfDice': None, 'HD': None, 'HD95': None},  # assume non-existing item is represented by None (e.g. on image 'path_3' there is no spleen)
-    'path_3/inferior_vena_cava': {'TPR': 0.6, 'FPR': 0.1, 'Dice': 0.82, 'NormSurfDice': 0.66, 'HD': 1.5, 'HD95': 1.5},
-    'path_4/liver': {'TPR': 0.2, 'FPR': 0.1, 'Dice': 0.72, 'NormSurfDice': 0.92, 'HD': 1.5, 'HD95': 1.5}
-}
+jsonfile_totalseg = '/mnt/hdda/murong/22k/results/usz/STAT/updated_TS.json'
+jsonfile_omaseg = '/mnt/hdda/murong/22k/results/usz/STAT/OMA.json'
 
+output_folder = '/mnt/hdda/murong/22k/results/usz/analysis'  # TODO
+analysis_name = 'compare_omaseg_totalseg'  # TODO
 
-# TODO: fill in the param below
-table_names = ['liver', 'spleen', 'inferior_vena_cava']  # TODO
-# table_names = ['Brainstem', 'Eye_L', 'Eye_R', 'Larynx', 'OpticNerve_L', 'OpticNerve_R', 'Parotid_L', 'Parotid_R', 
-#                'SubmandibularGland_L', 'SubmandibularGland_R', 'Aorta', 'Bladder', 'Brain', 'Esophagus',
-#                'Humerus_L', 'Humerus_R', 'Kidney_L', 'Kidney_R', 'Liver', 'Lung_L', 'Lung_R', 'Prostate',
-#                'SpinalCord', 'Spleen', 'Stomach', 'Thyroid', 'Trachea', 'V_CavaInferior', 'Heart']
-output_folder = '/mnt/hdda/murong/22k/debug/usz_results_analyasis'  # TODO
-analysis_name = 'result_analysis_example'  # TODO
-prefixes = ['Dice', 'NormSurfDice', 'HD', 'HD95']  # TODO
-score_higher_is_better_metrics = ['Dice', 'NormSurfDice']  # TODO
+prefixes = ['Dice', 'normalized_surface_dice', 'hausdorff_dist', 'hausdorff_dist_95', 'TPR', 'FPR', 'vol_error']
+score_higher_is_better_metrics = ['Dice', 'normalized_surface_dice', 'TPR']
 significance_level = 0.05
 
-# some other settings (no need to take care)
 highlight_diff_threshold = {
     'Dice': 0.02,
-    'HD95': 0.1,
-    'HD': 0.1, 
-    'NormSurfDice':  0.02,
+    'hausdorff_dist_95': 0.1,
+    'hausdorff_dist': 0.1, 
+    'normalized_surface_dice':  0.02,
+    'TPR': 0.02,
+    'FPR': 0.02,
+    'vol_error': 0.01
 }
-totalseg_exclude_to_compare = []
-experiment_results = {
-    'OMASeg': omaseg_scores,
-    'TotalSeg': totalseg_scores,
-}
+table_names = ['Brainstem', 'Eye_L', 'Eye_R', 'Larynx', 'OpticNerve_L', 'OpticNerve_R', 'Parotid_L', 'Parotid_R', 
+               'SubmandibularGland_L', 'SubmandibularGland_R', 'Aorta', 'Bladder', 'Brain', 'Esophagus',
+               'Humerus_L', 'Humerus_R', 'Kidney_L', 'Kidney_R', 'Liver', 'Lung_L', 'Lung_R', 'Prostate',
+               'SpinalCord', 'Spleen', 'Stomach', 'Thyroid', 'Trachea', 'V_CavaInferior', 'Heart',
+               'Chiasm', 'Glottis', 'LacrimalGland_L', 'LacrimalGland_R', 'Mandible', 'OralCavity', 'Pituitary', 'Rectum', 'SeminalVesicle']
+totalseg_exclude_to_compare = ['Chiasm', 'Glottis', 'LacrimalGland_L', 'LacrimalGland_R', 'Mandible', 'OralCavity', 'Pituitary', 'Rectum', 'SeminalVesicle']
 experiment_to_name_dict = {
     'omaseg': 'OMASeg',
     'totalsegmentator': 'TotalSeg',
 }
-# Collect available test images used for metric calculation
-omaseg_image_paths = set(path.rsplit('/', 1)[0] for path in omaseg_scores.keys())
-totalseg_image_paths = set(path.rsplit('/', 1)[0] for path in totalseg_scores.keys())
-if len(omaseg_image_paths) != len(totalseg_image_paths):
-    print("Error, the number of subjects in TotalSeg and OMASeg are not the same")
-    exit()
-organ_names_in_results_dict = set(key.rsplit('/', 1)[1] for key in omaseg_scores.keys())
-table_names_set = set(table_names)
-if organ_names_in_results_dict != table_names_set:
-    # Find differences
-    missing_in_dict = table_names_set - organ_names_in_results_dict
-    extra_in_dict = organ_names_in_results_dict - table_names_set
-    
-    if missing_in_dict:
-        print(f"Organs in table_names but not in results dictionary: {sorted(missing_in_dict)}")
-    if extra_in_dict:
-        print(f"Organs in resuylts dictionary but not in table_names: {sorted(extra_in_dict)}")
-    exit()
-
-image_paths = omaseg_image_paths
         
 for prefix in prefixes:
     if prefix in score_higher_is_better_metrics:
         higher_better = True
     else:
         higher_better = False
+
+    # load results
+    file = open(jsonfile_totalseg)
+    totalseg_scores = json.load(file)
+    file.close()
+    file = open(jsonfile_omaseg)
+    omaseg_scores = json.load(file)
+    file.close()
+
+    experiment_results = {
+        'OMASeg': omaseg_scores,
+        'TotalSeg': totalseg_scores,
+    }
+    # Collect available test images used for metric calculation
+    omaseg_image_paths = set(path.rsplit(':', 1)[0] for path in omaseg_scores.keys())
+    totalseg_image_paths = set(path.rsplit(':', 1)[0] for path in totalseg_scores.keys())
+    if len(omaseg_image_paths) != len(totalseg_image_paths):
+        print("Error, the number of subjects in TotalSeg and OMASeg are not the same")
+        exit()
+    organ_names_in_results_dict = set(key.rsplit(':', 1)[1] for key in omaseg_scores.keys())
+    table_names_set = set(table_names)
+    if organ_names_in_results_dict != table_names_set:
+        # Find differences
+        missing_in_dict = table_names_set - organ_names_in_results_dict
+        extra_in_dict = organ_names_in_results_dict - table_names_set
+        
+        if missing_in_dict:
+            print(f"Organs in table_names but not in results dictionary: {sorted(missing_in_dict)}")
+        if extra_in_dict:
+            print(f"Organs in resuylts dictionary but not in table_names: {sorted(extra_in_dict)}")
+        exit()
+
+    image_paths = omaseg_image_paths
+
+    # replace not-existing targets in TotalSeg scores from None to 0 (s.t. I can still keep OMASeg's scores)
+    for key in totalseg_scores.keys():
+        # Split the key to get the structure name
+        structure_name = key.rsplit(':', 1)[1]
+        
+        # Check if this structure is in the exclude list
+        if structure_name in totalseg_exclude_to_compare:
+            # Replace None with 0 in all metrics for this structure
+            for metric in totalseg_scores[key]:
+                if totalseg_scores[key][metric] is None:
+                    totalseg_scores[key][metric] = 0
 
     experiments_dicts = {
         'OMASeg': {},
@@ -94,7 +95,7 @@ for prefix in prefixes:
         experiments_dicts['OMASeg'][organ] = []
         experiments_dicts['TotalSeg'][organ] = []
         for image_path in image_paths:
-            full_path = f"{image_path}/{organ}"
+            full_path = f"{image_path}:{organ}"
 
             # Get scores for both models if they exist
             omaseg_score = omaseg_scores.get(full_path, {}).get(prefix)
@@ -240,10 +241,17 @@ for prefix in prefixes:
                     stats['median'].append(None)
                     stats['95% CI'].append(None)
                 else:
-                    stats['mean±std'].append(f"{mean:.4f}±{std:.4f}")
-                    stats['median'].append(f"{median:.4f}")
-                    lower, upper = bootstrap_ci(values)
-                    stats['95% CI'].append(f"({lower:.4f}, {upper:.4f})")
+                    if prefix == 'FPR':
+                        # need more digits
+                        stats['mean±std'].append(f"{mean:.8f}±{std:.8f}")
+                        stats['median'].append(f"{median:.8f}")
+                        lower, upper = bootstrap_ci(values)
+                        stats['95% CI'].append(f"({lower:.8f}, {upper:.8f})")
+                    else:
+                        stats['mean±std'].append(f"{mean:.4f}±{std:.4f}")
+                        stats['median'].append(f"{median:.4f}")
+                        lower, upper = bootstrap_ci(values)
+                        stats['95% CI'].append(f"({lower:.4f}, {upper:.4f})")
                 all_scores.extend(values)
 
             category_stats['score'].append(stats['mean±std'][-1])
