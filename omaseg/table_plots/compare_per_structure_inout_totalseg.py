@@ -9,7 +9,7 @@ from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, lab
 
 
 # TODO: param
-output_folder = '/mnt/hdda/murong/22k/results/compare_totalseg_omaseg'
+output_folder = '/mnt/hdda/murong/22k/results/compare_totalseg_omaseg_p005'
 grouping_in_out_dist = 'group_by_omaseg_inout'  # 'group_by_omaseg_inout'/'group_by_totalseg_dataset'
 analysis_name = 'filtered_unreliable_and_limited_fov'
 
@@ -254,20 +254,23 @@ for prefix in prefixes:
 
         category_means[distribution] = {}
         for experiment, data in experiments_dicts.items():
-            stats = {'mean±std': [], '95% CI': [], 'IQR': []}
-            category_stats = {cat: {'score': [], '95% CI': [], 'IQR': []} for cat in categories.keys()}
+            stats = {'mean±std': [], 'median': [], '95% CI': [], 'IQR': []}
+            category_stats = {cat: {'score_mean': [], 'score_median': [], '95% CI': [], 'IQR': []} for cat in categories.keys()}
             category_means[distribution][experiment] = {}
             for structure, values in data[distribution].items():
                 if experiment == 'TotalSeg' and structure in totalseg_exclude_to_compare:
                     stats['mean±std'].append(None)
+                    stats['median'].append(None)
                     stats['95% CI'].append(None)
                     stats['IQR'].append(None)
                 elif not values:
                     stats['mean±std'].append(None)
+                    stats['median'].append(None)
                     stats['95% CI'].append(None)
                     stats['IQR'].append(None)
                 else:
                     mean, std = np.mean(values), np.std(values)
+                    median = np.median(values)
                     Q1 = np.percentile(values, 25)
                     Q3 = np.percentile(values, 75)
                     IQR = Q3 - Q1
@@ -275,26 +278,31 @@ for prefix in prefixes:
                     if mean == 0 and std == 0:
                         # Changed from "0±0" to None
                         stats['mean±std'].append(None)
+                        stats['median'].append(None)
                         stats['95% CI'].append(None)
                     else:
                         stats['mean±std'].append(f"{mean:.4f}±{std:.4f}")
+                        stats['median'].append(f"{median:.4f}")
                         lower, upper = bootstrap_ci(values)
                         stats['95% CI'].append(f"({lower:.4f}, {upper:.4f})")
                     all_scores.extend(values)
 
                 for cat, list_structures in categories.items():
                     if structure in list_structures:
-                        category_stats[cat]['score'].append(stats['mean±std'][-1])
+                        category_stats[cat]['score_mean'].append(stats['mean±std'][-1])
+                        category_stats[cat]['score_median'].append(stats['median'][-1])
                         category_stats[cat]['95% CI'].append(stats['95% CI'][-1])
                         category_stats[cat]['IQR'].append(stats['IQR'][-1])
 
             d[f'{experiment} {distribution} mean'] = stats['mean±std']
+            d[f'{experiment} {distribution} median'] = stats['median']
             d[f'{experiment} {distribution} 95% CI'] = stats['95% CI']
             d[f'{experiment} {distribution} IQR'] = stats['IQR']
 
             for cat, metrics in category_stats.items():
                 category_means[distribution][experiment][cat] = {
-                    'overall score': np.mean([float(m.split('±')[0]) for m in metrics['score'] if m is not None]),
+                    'overall mean': np.mean([float(m.split('±')[0]) for m in metrics['score_mean'] if m is not None]),
+                    'overall median': np.mean([float(m) for m in metrics['score_median'] if m is not None]),
                     'overall 95% CI': (
                         np.mean([float(m.split('(')[1].split(',')[0])
                                 for m in metrics['95% CI'] if m is not None]),
@@ -346,22 +354,29 @@ for prefix in prefixes:
 
         for distribution in distributions:
             for row in range(output_df.shape[0]):
-                for result_type in ['mean', 'IQR']:
+                for result_type in ['mean', 'median', 'IQR']:
                     values = [output_df.iloc[row][f'{model} {distribution} {result_type}']
                             for model in experiment_to_name_dict.values()]
                     if all(pd.isna(x) for x in values):
                         continue
-                    if result_type == 'mean':
-                        means = []
-                        for value in values:
-                            if pd.isna(value):
-                                means.append(None)
-                            else:
-                                means.append(float(value.split('±')[0]))
+                    if result_type in ['mean', 'median']:
+                        means_or_medians = []
+                        if result_type == 'mean':
+                            for value in values:
+                                if pd.isna(value):
+                                    means_or_medians.append(None)
+                                else:
+                                    means_or_medians.append(float(value.split('±')[0]))
+                        else:
+                            for value in values:
+                                if pd.isna(value):
+                                    means_or_medians.append(None)
+                                else:
+                                    means_or_medians.append(float(value))
                         rowindex = row + 1
 
-                        if None in means:
-                            non_none_index = 0 if means[0] is not None else 1
+                        if None in means_or_medians:
+                            non_none_index = 0 if means_or_medians[0] is not None else 1
                             colname = f"{list(experiment_to_name_dict.values())[non_none_index]} {distribution} {result_type}"
                             colindex = output_df.columns.get_loc(colname)
                             value = output_df[colname].iloc[row]
@@ -369,18 +384,18 @@ for prefix in prefixes:
                                             value, format_only_value)
                         else:
                             if prefix in ['dice', 'normalized_distance']:
-                                better_index = 0 if means[0] > means[1] else (
-                                    1 if means[1] > means[0] else None)
+                                better_index = 0 if means_or_medians[0] > means_or_medians[1] else (
+                                    1 if means_or_medians[1] > means_or_medians[0] else None)
                             else:
-                                better_index = 0 if means[0] < means[1] else (
-                                    1 if means[1] < means[0] else None)
+                                better_index = 0 if means_or_medians[0] < means_or_medians[1] else (
+                                    1 if means_or_medians[1] < means_or_medians[0] else None)
 
                             if better_index is not None:
                                 colname = f"{list(experiment_to_name_dict.values())[better_index]} {distribution} {result_type}"
                                 colindex = output_df.columns.get_loc(colname)
                                 value = output_df[colname].iloc[row]
 
-                                if abs(means[0] - means[1]) > highlight_diff_threshold[prefix]: 
+                                if abs(means_or_medians[0] - means_or_medians[1]) > highlight_diff_threshold[prefix]: 
                                     worksheet.write(rowindex, colindex,
                                                     value, format_significant)
                                 else:
@@ -436,7 +451,8 @@ for prefix in prefixes:
                     'Distribution': distribution,
                     'Experiment': experiment,
                     'Category': cat,
-                    'Overall Score': metrics['overall score'],
+                    'Overall Mean': metrics['overall mean'],
+                    'Overall Median': metrics['overall median'],
                     'Overall 95% CI': metrics['overall 95% CI'],
                     'Overall IQR': metrics['overall IQR'],
                 })
