@@ -13,8 +13,9 @@ def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, 
         model1_scores: baseline
         model2_scores: our model
     """
-    import matplotlib.colors as mcolors
-    
+
+    model1_color = "#0072BD"
+    model2_color = "#FF0000"
     # Set default circle positions if none provided
     if circle_positions is None:
         circle_positions = [0.2, 0.4, 0.6, 0.8, 1.0]
@@ -30,24 +31,33 @@ def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, 
         ordered_labels = []
         label_colors = []
         for system, structures in system_groups.items():
-            valid_structures = [s for s in structures if s in model1_scores]
+            valid_structures = [s for s in structures if s in model2_scores]
             ordered_labels.extend(valid_structures)
             label_colors.extend([system_colors[system]] * len(valid_structures))
         
         # Check if all structures are included
-        all_structures = set(model1_scores.keys())
+        all_structures = set(model2_scores.keys())
         grouped_structures = set(ordered_labels)
         ungrouped = all_structures - grouped_structures
         if ungrouped:
             ordered_labels.extend(sorted(ungrouped))
             label_colors.extend([[0.7, 0.7, 0.7, 1.0]] * len(ungrouped))
     else:
-        ordered_labels = list(model1_scores.keys())
+        ordered_labels = list(model2_scores.keys())
         label_colors = [[0, 0, 0, 1.0]] * len(ordered_labels)
     
-    # Convert dictionaries to ordered lists
-    scores1 = [model1_scores[label] for label in ordered_labels]
-    scores2 = [model2_scores[label] for label in ordered_labels]
+    # Find unique structures
+    unique_structures = [struct for struct in model2_scores.keys() 
+                        if struct not in model1_scores or np.isnan(model1_scores[struct])]
+    
+    scores1 = []
+    scores2 = []
+    for label in ordered_labels:
+        scores2.append(model2_scores[label])
+        if label in unique_structures:
+            scores1.append(0.0)  # unique structures in baseline: set to 0
+        else:
+            scores1.append(model1_scores[label])
     
     angles = np.linspace(0, 2*pi, len(ordered_labels), endpoint=False)
     
@@ -61,30 +71,31 @@ def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, 
     
     ax = fig.add_subplot(111, projection='polar')
     ax.spines['polar'].set_visible(False)
+    
+    # Fill in covered area
+    ax.fill(angles, scores1, color=model1_color, alpha=0.08, zorder=0)  # Baseline
+    ax.fill(angles, scores2, color=model2_color, alpha=0.06, zorder=1)  # OMASeg
        
     # Plot data with markers
-    ax.plot(angles, scores1, 'o-', color='skyblue', linewidth=3, label=model1_name,
-            markersize=8 , markerfacecolor='skyblue', markeredgecolor='skyblue', zorder=1)
-    ax.plot(angles, scores2, 'o-', color='#FF3333', linewidth=3, label=model2_name,
-            markersize=8, markerfacecolor='#FF3333', markeredgecolor='#FF3333', zorder=2)
+    ax.plot(angles, scores1, 'o-', color=model1_color, linewidth=1, label=model1_name,
+            markersize=8, markerfacecolor=model1_color, markeredgecolor=model1_color, zorder=2)
+    ax.plot(angles, scores2, 'o-', color=model2_color, linewidth=3, label=model2_name,
+            markersize=8, markerfacecolor=model2_color, markeredgecolor=model2_color, zorder=3)
     
     # Unique targets
-    unique_structures = [struct for struct in model2_scores.keys() 
-                        if struct not in model1_scores or np.isnan(model1_scores[struct])]
     for angle, score, label in zip(angles[:-1], scores2[:-1], ordered_labels):
         if label in unique_structures:
-            # use special markers
             ax.plot(angle, score, 'X', color='#03c03c', markersize=12, 
-                   markerfacecolor='#03c03c', markeredgecolor='#03c03c', zorder=3)
+                   markerfacecolor='#03c03c', markeredgecolor='#03c03c', zorder=4)
             
     unique_marker = plt.Line2D([], [], 
-                                marker='X',
-                                color='#03c03c',
-                                markerfacecolor='#03c03c',
-                                markeredgecolor='#03c03c',
-                                markersize=8,
-                                linestyle='None',
-                                label='OMASeg Unique')
+                              marker='X',
+                              color='#03c03c',
+                              markerfacecolor='#03c03c',
+                              markeredgecolor='#03c03c',
+                              markersize=8,
+                              linestyle='None',
+                              label='OMASeg Unique')
     handles, labels = ax.get_legend_handles_labels()
     handles.append(unique_marker)
     model_legend = ax.legend(handles=handles,
