@@ -9,12 +9,13 @@ from omaseg.table_plots.utils.utils import align_and_filter_scores, bootstrap_ci
 jsonfile_totalseg = '/mnt/hdda/murong/22k/results/usz/STAT/updated_TS.json'
 jsonfile_omaseg = '/mnt/hdda/murong/22k/results/usz/STAT/OMA.json'
 
-output_folder = '/mnt/hdda/murong/22k/results/usz/analysis'  # TODO
+output_folder = '/mnt/hdda/murong/22k/results/usz/analysis_p005'  # TODO
 analysis_name = 'compare_omaseg_totalseg'  # TODO
 
 prefixes = ['Dice', 'normalized_surface_dice', 'hausdorff_dist', 'hausdorff_dist_95', 'TPR', 'FPR', 'vol_error']
 score_higher_is_better_metrics = ['Dice', 'normalized_surface_dice', 'TPR']
 significance_level = 0.05
+do_benjamini_hochberg = False
 
 highlight_diff_threshold = {
     'Dice': 0.02,
@@ -194,7 +195,7 @@ for prefix in prefixes:
         })
 
     # Apply Benjamini-Hochberg correction
-    if p_values:
+    if p_values and do_benjamini_hochberg:
         rejections = benjamini_hochberg_correction(p_values, significance_level)
         
         for idx, is_significant in enumerate(rejections):
@@ -298,22 +299,29 @@ for prefix in prefixes:
         format_omaseg = workbook.add_format({'bg_color': '#a1d99b'})
 
         for row in range(output_df.shape[0]):
-            for result_type in ['mean', 'IQR']:
+            for result_type in ['mean', 'median', 'IQR']:
                 values = [output_df.iloc[row][f'{model} {result_type}']
                         for model in experiment_to_name_dict.values()]
                 if all(pd.isna(x) for x in values):
                     continue
-                if result_type == 'mean':
-                    means = []
-                    for value in values:
-                        if pd.isna(value):
-                            means.append(None)
-                        else:
-                            means.append(float(value.split('±')[0]))
+                if result_type in ['mean', 'median']:
+                    means_or_medians = []
+                    if result_type == 'mean':
+                        for value in values:
+                            if pd.isna(value):
+                                means_or_medians.append(None)
+                            else:
+                                means_or_medians.append(float(value.split('±')[0]))
+                    else:
+                        for value in values:
+                            if pd.isna(value):
+                                means_or_medians.append(None)
+                            else:
+                                means_or_medians.append(float(value))
                     rowindex = row + 1
 
-                    if None in means:
-                        non_none_index = 0 if means[0] is not None else 1
+                    if None in means_or_medians:
+                        non_none_index = 0 if means_or_medians[0] is not None else 1
                         colname = f"{list(experiment_to_name_dict.values())[non_none_index]} {result_type}"
                         colindex = output_df.columns.get_loc(colname)
                         value = output_df[colname].iloc[row]
@@ -321,18 +329,18 @@ for prefix in prefixes:
                                         value, format_only_value)
                     else:
                         if prefix in score_higher_is_better_metrics:
-                            better_index = 0 if means[0] > means[1] else (
-                                1 if means[1] > means[0] else None)
+                            better_index = 0 if means_or_medians[0] > means_or_medians[1] else (
+                                1 if means_or_medians[1] > means_or_medians[0] else None)
                         else:
-                            better_index = 0 if means[0] < means[1] else (
-                                1 if means[1] < means[0] else None)
+                            better_index = 0 if means_or_medians[0] < means_or_medians[1] else (
+                                1 if means_or_medians[1] < means_or_medians[0] else None)
 
                         if better_index is not None:
                             colname = f"{list(experiment_to_name_dict.values())[better_index]} {result_type}"
                             colindex = output_df.columns.get_loc(colname)
                             value = output_df[colname].iloc[row]
 
-                            if abs(means[0] - means[1]) > highlight_diff_threshold[prefix]: 
+                            if abs(means_or_medians[0] - means_or_medians[1]) > highlight_diff_threshold[prefix]: 
                                 worksheet.write(rowindex, colindex,
                                                 value, format_significant)
                             else:
@@ -373,9 +381,15 @@ for prefix in prefixes:
         for row in range(output_df.shape[0]):
             better_model = output_df[f'Better Model'].iloc[row]
             is_significant = output_df[f'Significant After Correction'].iloc[row]
-            if is_significant: # only highlight if the difference is significant after correction
+            if do_benjamini_hochberg:
+                if is_significant: # only highlight if the difference is significant after correction
+                    if better_model == 'TotalSeg':
+                        worksheet.write(row + 1, better_model_col, better_model, format_totalsegmentator)
+                    elif better_model == 'OMASeg':
+                        worksheet.write(row + 1, better_model_col, better_model, format_omaseg)
+            else:
                 if better_model == 'TotalSeg':
-                    worksheet.write(row + 1, better_model_col, better_model, format_totalsegmentator)
+                        worksheet.write(row + 1, better_model_col, better_model, format_totalsegmentator)
                 elif better_model == 'OMASeg':
                     worksheet.write(row + 1, better_model_col, better_model, format_omaseg)
 

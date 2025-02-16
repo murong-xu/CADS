@@ -11,17 +11,33 @@ from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, lab
 # TODO: param
 output_folder = '/mnt/hdda/murong/22k/results/compare_totalseg_omaseg_p005'
 grouping_in_out_dist = 'group_by_omaseg_inout'  # 'group_by_omaseg_inout'/'group_by_totalseg_dataset'
+# analysis_name = 'scores_final'
 analysis_name = 'filtered_unreliable_and_limited_fov'
+# analysis_name = 'filtered_unreliable'
+# analysis_name = 'original_GT_but_remove_limited_fov'
 
+# experiment_results_path = {
+#     'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_final/test_0',
+#     'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
+# }
 experiment_results_path = {
     'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT/test_0',
     'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT/test_0',
 }
+# experiment_results_path = {
+#     'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
+#     'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
+# }
+# experiment_results_path = {
+#     'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_remove_limited_fov/test_0',
+#     'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_remove_limited_fov/test_0',
+# }
 
 prefixes = ['dice', 'hd95', 'hd', 'normalized_distance']
 distributions = ['in', 'out', 'all']
 splits = ['test']
 significance_level = 0.05 #TODO: test more values
+do_benjamini_hochberg = False
 filter_transitional_in_verse = True
 exclude_face_from_overall_score = True
 
@@ -222,7 +238,7 @@ for prefix in prefixes:
             })
 
         # Apply Benjamini-Hochberg correction
-        if p_values:
+        if p_values and do_benjamini_hochberg:
             rejections = benjamini_hochberg_correction(p_values, significance_level)
             
             for idx, is_significant in enumerate(rejections):
@@ -436,9 +452,15 @@ for prefix in prefixes:
             for row in range(output_df.shape[0]):
                 better_model = output_df[f'{distribution} Better Model'].iloc[row]
                 is_significant = output_df[f'{distribution} Significant After Correction'].iloc[row]
-                if is_significant: # only highlight if the difference is significant after correction
+                if do_benjamini_hochberg:
+                    if is_significant: # only highlight if the difference is significant after correction
+                        if better_model == 'TotalSeg':
+                            worksheet.write(row + 1, better_model_col, better_model, format_totalsegmentator)
+                        elif better_model == 'OMASeg':
+                            worksheet.write(row + 1, better_model_col, better_model, format_omaseg)
+                else:
                     if better_model == 'TotalSeg':
-                        worksheet.write(row + 1, better_model_col, better_model, format_totalsegmentator)
+                            worksheet.write(row + 1, better_model_col, better_model, format_totalsegmentator)
                     elif better_model == 'OMASeg':
                         worksheet.write(row + 1, better_model_col, better_model, format_omaseg)
 
