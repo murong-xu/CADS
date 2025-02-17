@@ -16,22 +16,26 @@ analysis_name = 'filtered_unreliable_and_limited_fov'
 # analysis_name = 'filtered_unreliable'
 # analysis_name = 'original_GT_but_remove_limited_fov'
 
-# experiment_results_path = {
-#     'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_final/test_0',
-#     'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
-# }
-experiment_results_path = {
-    'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT/test_0',
-    'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT/test_0',
-}
-# experiment_results_path = {
-#     'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
-#     'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
-# }
-# experiment_results_path = {
-#     'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_remove_limited_fov/test_0',
-#     'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_remove_limited_fov/test_0',
-# }
+if analysis_name == 'filtered_unreliable_and_limited_fov':
+    experiment_results_path = {
+        'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT/test_0',
+        'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT/test_0',
+    }
+if analysis_name == 'scores_final':
+    experiment_results_path = {
+        'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_final/test_0',
+        'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
+    }
+if analysis_name == 'filtered_unreliable':
+    experiment_results_path = {
+        'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
+        'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
+    }
+if analysis_name == 'original_GT_but_remove_limited_fov':
+    experiment_results_path = {
+        'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_remove_limited_fov/test_0',
+        'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_remove_limited_fov/test_0',
+    }
 
 prefixes = ['dice', 'hd95', 'hd', 'normalized_distance']
 distributions = ['in', 'out', 'all']

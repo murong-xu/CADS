@@ -33,3 +33,21 @@ def read_results_table(path_to_table, column_to_read):
         raise ValueError("No data found in the specified columns")
         
     return omaseg_results, totalseg_results
+
+# check: up-to-date with my system definition?
+anatomical_system_colors = {
+    "Skeletal System": "#4DAF7C",
+    "Muscular System": "#AA4A44",
+    "Cardiovascular System": "#D03B3B",
+    "Respiratory System": "#7EB5A6",
+    "Digestive System": "#B87D4B",
+    "Urinary System": "#EFC75E",
+    "Reproductive System": "#E091C3",
+    "Endocrine System": "#5C9BD1",
+    "Nervous System": "#8E63B5",
+    "Sensory Organs": "#98D8AA",
+    "Lymphatic and Immune System": "#5E97A3",
+    "Body Cavities": "#9A8A76",
+    "Other Structures": "#808080",
+    "Glandular System": "#E39A2E"
+}

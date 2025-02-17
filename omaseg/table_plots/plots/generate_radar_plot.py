@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import pi
 
-from omaseg.table_plots.plots.utils import read_results_table
+from omaseg.table_plots.plots.utils import read_results_table, anatomical_system_colors
 from omaseg.dataset_utils.bodyparts_labelmaps import anatomical_systems
 
 def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, output_path, title="Radar Plot", 
@@ -23,9 +23,9 @@ def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, 
     # Reorder labels based on system groups if provided
     if system_groups:
         # Generate a color map for systems
-        n_systems = len(system_groups)
-        colors = plt.cm.tab20(np.linspace(0, 1, n_systems))
-        system_colors = dict(zip(system_groups.keys(), colors))
+        # n_systems = len(system_groups)
+        # colors = plt.cm.tab20(np.linspace(0, 1, n_systems))
+        system_colors = anatomical_system_colors
         
         # Create ordered list of labels and their colors
         ordered_labels = []

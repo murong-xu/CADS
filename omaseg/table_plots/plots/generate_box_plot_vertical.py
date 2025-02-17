@@ -5,57 +5,117 @@ import os
 import numpy as np
 
 from omaseg.table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids
-from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed, structure_to_in_dist_training_dataset
+from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed, structure_to_in_dist_training_dataset, anatomical_systems
+from omaseg.table_plots.plots.utils import anatomical_system_colors
 
 
-def generate_box_plot(results_dict, metric_name='Dice', output_path=None, title="Structure-wise Dice Score Distribution"):
+def generate_box_plot(results_dict, metric_name='DSC', output_path=None, title="Structure-wise Performance Distribution",
+                     anatomical_systems=None):
     """
-    Generate a vertical set of box-plots for all structures.
+    Generate a box plot grouped by anatomical systems.
+    Args:
+        results_dict: Dictionary of structure-wise scores
+        anatomical_systems: Dictionary of anatomical system groupings
     """
     data_list = []
-    for organ, scores in results_dict.items():
-        n_samples = len(scores)
-        for score in scores:
-            data_list.append({
-                'Organ': f"{organ} (n={n_samples})",
-                metric_name: score
-            })
     
+    # In each anatomical system: sort by median
+    structure_medians = {organ: np.median(scores) for organ, scores in results_dict.items()}
+    for system, structures in anatomical_systems.items():
+        valid_structures = [s for s in structures if s in results_dict]
+        sorted_structures = sorted(valid_structures, 
+                                 key=lambda x: structure_medians[x],
+                                 reverse=True)
+        for organ in sorted_structures:
+            scores = results_dict[organ]
+            n_samples = len(scores)
+            for score in scores:
+                data_list.append({
+                    'Organ': f"{organ} (n={n_samples})",
+                    metric_name: score,
+                    'System': system
+                })
+            
     df = pd.DataFrame(data_list)
-    
-    # calculate each structure's median for sorting
-    median_scores = df.groupby('Organ')[metric_name].median()
-    organ_order = median_scores.sort_values(ascending=False).index
-    
     plt.figure(figsize=(12, len(results_dict) * 0.3))
     
     ax = sns.boxplot(data=df, 
                     y='Organ', 
                     x=metric_name,
-                    order=organ_order,
-                    color='lightcoral',
+                    hue='System',
+                    palette=anatomical_system_colors,
                     whis=1.5,
                     showfliers=True,
                     flierprops={'marker': 'o',
-                               'markerfacecolor': 'black',  
+                               'markerfacecolor': 'black',
                                'markeredgecolor': 'black',
-                               'markersize': 2,  # same setting as stripplot
+                               'markersize': 2,
                                'alpha': 0.3})
+    
     # add scatters (original data)
     sns.stripplot(data=df,
                  y='Organ',
                  x=metric_name,
-                 order=organ_order,
                  color='black',
                  size=2,
                  alpha=0.3,
                  jitter=0.2)
     
-    ax.set_xlabel(metric_name, fontsize=16)
-    ax.set_ylabel('167 Whole-body Structures', fontsize=16)
-    plt.title(title, pad=20, fontsize=20, fontweight='bold')
+    # calculate ststistics (median, mean)
+    ordered_organs = df['Organ'].unique()
+    stats = df.groupby('Organ').agg({
+        metric_name: ['median', 'mean', 'std']
+    })[metric_name].reindex(ordered_organs)
+    
+    right_edge = ax.get_xlim()[1]
+    ax.text(right_edge, -0.8,
+            'median',
+            va='center', ha='left', fontsize=10,
+            fontweight='bold', color='black')
+    ax.text(right_edge + 0.12, -0.8,
+            'mean±std',
+            va='center', ha='left', fontsize=10,
+            fontweight='bold', color='black')
+    
+    for i, (organ, row) in enumerate(stats.iterrows()):
+        median_str = f'{row["median"]:.3f}'
+        ax.text(right_edge, i,
+                median_str,
+                va='center',
+                ha='left',
+                fontsize=8,
+                color='black',
+                alpha=0.7)
+        mean_std_str = f'{row["mean"]:.3f}±{row["std"]:.3f}'
+        ax.text(right_edge + 0.12, i,
+                mean_std_str,
+                va='center',
+                ha='left',
+                fontsize=8,
+                color='black',
+                alpha=0.7)
+        
+    prev_system = None
+    y_coords = []
+    for i, (idx, row) in enumerate(df.groupby('Organ').first().iterrows()):
+        if prev_system and row['System'] != prev_system:
+            plt.axhline(y=i-0.5, color='gray', linestyle='--', alpha=0.3)
+        prev_system = row['System']
+        y_coords.append(i)
+    
+    ax.set_xlabel(metric_name, fontsize=12)
+    ax.set_ylabel('Organ', fontsize=12)
+    plt.title(title, pad=20, fontsize=14, fontweight='bold')
     ax.grid(True, axis='x', linestyle='--', alpha=0.7)
-    ax.set_xlim(0, 1)
+    
+    ax.set_xlim(0, right_edge + 0.3)  
+    ax.set_xticks(np.arange(0, 1.2, 0.2))
+    
+    plt.legend(title='Anatomical Systems', 
+              bbox_to_anchor=(1.05, 1),
+              loc='upper left',
+              fontsize=10,
+              title_fontsize=12)
     
     if output_path:
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
@@ -74,22 +134,26 @@ if __name__ == "__main__":
     # analysis_name = 'filtered_unreliable'
     # analysis_name = 'original_GT_but_remove_limited_fov'
 
-    # experiment_results_path = {
-    #     'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_final/test_0',
-    #     'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
-    # }
-    experiment_results_path = {
-        'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT/test_0',
-        'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT/test_0',
-    }
-    # experiment_results_path = {
-    #     'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
-    #     'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
-    # }
-    # experiment_results_path = {
-    #     'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_remove_limited_fov/test_0',
-    #     'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_remove_limited_fov/test_0',
-    # }
+    if analysis_name == 'filtered_unreliable_and_limited_fov':
+        experiment_results_path = {
+            'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT/test_0',
+            'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT/test_0',
+        }
+    if analysis_name == 'scores_final':
+        experiment_results_path = {
+            'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_final/test_0',
+            'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
+        }
+    if analysis_name == 'filtered_unreliable':
+        experiment_results_path = {
+            'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
+            'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
+        }
+    if analysis_name == 'original_GT_but_remove_limited_fov':
+        experiment_results_path = {
+            'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_remove_limited_fov/test_0',
+            'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_remove_limited_fov/test_0',
+        }
 
     prefix = 'dice'  # TODO:
     distributions = ['in', 'out', 'all']
@@ -163,11 +227,7 @@ if __name__ == "__main__":
         experiments_dicts[experiment_to_name_dict[experiment]
                         ] = structure_values
 
-    # Align scores
-    removed_data_points = {distribution: {
-        structure: 0 for structure in table_names} for distribution in distributions}
-    valid_test_data_points = {distribution: {
-        structure: 0 for structure in table_names} for distribution in distributions}
+    # Align scores: only remove NaNs
     for distribution in distributions:
         for structure in table_names:
             omaseg_scores = experiments_dicts['OMASeg'][distribution][structure]
@@ -176,10 +236,6 @@ if __name__ == "__main__":
             experiments_dicts['OMASeg'][distribution][structure] = scores_1
 
     # # Align scores: considering baseline
-    # removed_data_points = {distribution: {
-    #     structure: 0 for structure in table_names} for distribution in distributions}
-    # valid_test_data_points = {distribution: {
-    #     structure: 0 for structure in table_names} for distribution in distributions}
     # for distribution in distributions:
     #     for structure in table_names:
     #         omaseg_scores = experiments_dicts['OMASeg'][distribution][structure]
@@ -202,4 +258,5 @@ if __name__ == "__main__":
     generate_box_plot(experiments_dicts['OMASeg'][plot_dist], 
                       metric_name=plot_metric_name, 
                       output_path=plot_output_path,
-                      title=plot_title)
+                      title=plot_title,
+                      anatomical_systems=anatomical_systems) 
