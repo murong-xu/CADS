@@ -5,16 +5,38 @@ import os
 from omaseg.table_plots.utils.utils import filter_rows, transitional_ids, amos_uterus_ids, compare_models_stat_test
 
 # TODO: param
+output_folder = '/mnt/hdda/murong/22k/results/compare_totalseg_omaseg_p005'
+
+# analysis_name = 'scores_final'
+analysis_name = 'filtered_unreliable_and_limited_fov'
+# analysis_name = 'filtered_unreliable'
+# analysis_name = 'original_GT_but_remove_limited_fov'
+
+if analysis_name == 'filtered_unreliable_and_limited_fov':
+    experiment_results_path = {
+        'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT/test_0',
+        'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT/test_0',
+    }
+if analysis_name == 'scores_final':
+    experiment_results_path = {
+        'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_final/test_0',
+        'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_roirobust_new/test_0',
+    }
+if analysis_name == 'filtered_unreliable':
+    experiment_results_path = {
+        'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
+        'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
+    }
+if analysis_name == 'original_GT_but_remove_limited_fov':
+    experiment_results_path = {
+        'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_remove_limited_fov/test_0',
+        'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_remove_limited_fov/test_0',
+    }
+
 experiment_to_name_dict = {
     'omaseg': 'OMASeg',
     'totalsegmentator': 'TotalSeg',
 }
-experiment_results_path = {
-    'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT/test_0',
-    'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_labelata_confirmed_reliable_GT/test_0',
-}
-output_folder = '/mnt/hdda/murong/22k/results/compare_totalseg_omaseg'
-analysis_name = 'filtered_unreliable_and_limited_fov'
 
 datasets_eval = [
     '0001_visceral_gc',
@@ -50,6 +72,7 @@ splits = ['test']
 prefixes = ['dice', 'hd95', 'hd', 'normalized_distance']
 filter_transitional_in_verse = True
 significance_level = 0.05  #TODO: test more values
+do_benjamini_hochberg = False
 
 for prefix in prefixes:
     if prefix in ['dice', 'normalized_distance']:
@@ -98,10 +121,11 @@ for prefix in prefixes:
 
         # Compre models
         combined_results_df = compare_models_stat_test(
-            results_models['omaseg'], results_models['totalsegmentator'], alpha=significance_level, higher_better=higher_better)
+            results_models['omaseg'], results_models['totalsegmentator'], alpha=significance_level, 
+            higher_better=higher_better, do_benjamini_hochberg=do_benjamini_hochberg)
 
         # Highlight best scores
-        output_compare_folder = os.path.join(output_folder, analysis_name, 'per-challenge')
+        output_compare_folder = os.path.join(output_folder, 'per-challenge', analysis_name)
         if not os.path.exists(output_compare_folder):
             os.makedirs(output_compare_folder)
         filename = os.path.join(output_compare_folder, f'{prefix}_{dataset}.xlsx')
@@ -180,10 +204,16 @@ for prefix in prefixes:
             for row in range(combined_results_df.shape[0]):
                 better_model = combined_results_df['Better Model'].iloc[row]
                 is_significant = combined_results_df['Significant After Correction'].iloc[row]
-                if is_significant: # only highlight if the difference is significant after correction
+                if do_benjamini_hochberg:
+                    if is_significant: # only highlight if the difference is significant after correction
+                        if better_model == 'TotalSeg':
+                            worksheet.write(row + 1, better_model_col,
+                                            better_model, format_totalsegmentator)
+                        elif better_model == 'OMASeg':
+                            worksheet.write(row + 1, better_model_col,
+                                            better_model, format_omaseg)
+                else:
                     if better_model == 'TotalSeg':
-                        worksheet.write(row + 1, better_model_col,
-                                        better_model, format_totalsegmentator)
+                            worksheet.write(row + 1, better_model_col, better_model, format_totalsegmentator)
                     elif better_model == 'OMASeg':
-                        worksheet.write(row + 1, better_model_col,
-                                        better_model, format_omaseg)
+                        worksheet.write(row + 1, better_model_col, better_model, format_omaseg)

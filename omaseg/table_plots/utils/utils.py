@@ -59,7 +59,7 @@ def get_task_id(structure):
     return None 
 
 
-def compare_models_stat_test(model1_results, model2_results, alpha=0.05, higher_better=True):    
+def compare_models_stat_test(model1_results, model2_results, alpha=0.05, higher_better=True, do_benjamini_hochberg=False):    
     # Collect all p-values
     p_values = []
     p_value_to_structure = {}
@@ -128,7 +128,7 @@ def compare_models_stat_test(model1_results, model2_results, alpha=0.05, higher_
         })
 
     # Apply Benjamini-Hochberg correction
-    if p_values:
+    if p_values and do_benjamini_hochberg:
         rejections = benjamini_hochberg_correction(p_values, alpha)
         
         for idx, is_significant in enumerate(rejections):
