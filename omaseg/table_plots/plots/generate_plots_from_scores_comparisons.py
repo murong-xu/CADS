@@ -45,8 +45,11 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
         exit()
 
     experiments_dicts = {}
+    test_datasets_sources_dict = {}
     for experiment in experiment_to_name_dict.keys():
         structure_values = {distribution: {table_name: []
+                                        for table_name in table_names} for distribution in distributions}
+        test_datasets_sources = {distribution: {table_name: []
                                         for table_name in table_names} for distribution in distributions}
         excelfiles = list_specific_files(experiment_results_path[experiment], prefix=prefix, suffix='.xlsx')
         for file in excelfiles:
@@ -88,14 +91,18 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
                         if structure_is_in_dist and 'in' in structure_values:
                             structure_values['in'][table_names[j]].extend(
                                 values)
+                            test_datasets_sources['in'][table_names[j]].append(datasetname)
                         elif not structure_is_in_dist and 'out' in structure_values:
                             structure_values['out'][table_names[j]].extend(
                                 values)
+                            test_datasets_sources['out'][table_names[j]].append(datasetname)
                         if 'all' in structure_values:
                             structure_values['all'][table_names[j]].extend(
                                 values)
+                            test_datasets_sources['all'][table_names[j]].append(datasetname)
         experiments_dicts[experiment_to_name_dict[experiment]
                         ] = structure_values
+        test_datasets_sources_dict[experiment_to_name_dict[experiment]] = test_datasets_sources
     
     # Align scores
     for distribution in distributions:
@@ -108,13 +115,11 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
 
             experiments_dicts['OMASeg'][distribution][structure] = aligned_omaseg
             experiments_dicts['TotalSeg'][distribution][structure] = aligned_totalseg
+    
+    return experiments_dicts, test_datasets_sources_dict
 
 
 if __name__ == "__main__":
-    plot_dist = 'all'  # TODO:
-    plot_metric_name = 'Dice'  # TODO:
-    plot_output_path = "/mnt/hdda/murong/22k/plots/per-structure/per-system_histogram_compare_dice"  # TODO:
-
     # Step 1) collect scores
     grouping_in_out_dist = 'group_by_omaseg_inout'  # 'group_by_omaseg_inout'/'group_by_totalseg_dataset'
     # analysis_name = 'scores_final'
@@ -123,9 +128,12 @@ if __name__ == "__main__":
     # analysis_name = 'original_GT_but_remove_limited_fov'
     prefix = 'dice'  # TODO:
 
-    experiments_dicts = collect_scores(analysis_name, grouping_in_out_dist, prefix)
+    experiments_dicts, test_datasets_sources_dict = collect_scores(analysis_name, grouping_in_out_dist, prefix)
 
     # Step 2) generate plot
+    plot_dist = 'all'  # TODO:
+    plot_metric_name = 'Dice'  # TODO:
+    plot_output_path = "/mnt/hdda/murong/22k/plots/per-structure/per-system_histogram_compare_dice"  # TODO:
     list_anatomical_systems = list(anatomical_systems.keys())
     for anatomical_system in list_anatomical_systems:
         generate_histogram_plot(
@@ -133,8 +141,8 @@ if __name__ == "__main__":
             model2_scores=experiments_dicts['OMASeg'][plot_dist],
             model1_name='TotalSeg',
             model2_name='OMASeg',
-            output_path = plot_output_path, 
-            metric_name = plot_metric_name,
+            output_path=plot_output_path,
+            metric_name=plot_metric_name,
             system_group=anatomical_system,
             anatomical_systems=anatomical_systems
         )

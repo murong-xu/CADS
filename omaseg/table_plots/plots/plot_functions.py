@@ -184,6 +184,184 @@ def generate_box_plot(results_dict, metric_name='DSC', output_path=None, title="
     return ax
 
 
+def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_dict, metric_name='DSC', output_path=None,
+                                            title="Structure-wise Performance Distribution", anatomical_systems=None):
+    """
+    Generate a box plot with dataset source indicators.
+    Args:
+        results_dict: Dictionary of structure-wise scores
+        test_datasets_sources_dict: Dictionary mapping each structure to its test datasets
+    """    
+    data_list = []
+    
+    # in each anatomical system: sort by median
+    structure_medians = {organ: np.median(scores) for organ, scores in results_dict.items()}
+    for system, structures in anatomical_systems.items():
+        valid_structures = [s for s in structures if s in results_dict]
+        sorted_structures = sorted(valid_structures, 
+                                 key=lambda x: structure_medians[x],
+                                 reverse=True)
+        for organ in sorted_structures:
+            scores = results_dict[organ]
+            n_samples = len(scores)
+            for score in scores:
+                data_list.append({
+                    'Organ': f"{organ} (n={n_samples})",
+                    metric_name: score,
+                    'System': system
+                })
+    
+    df = pd.DataFrame(data_list)
+    
+    fig = plt.figure(figsize=(20, len(results_dict) * 0.3))
+    # 3 major parts: 1) box-plot+stat, 2) dataset indicator, 3) legend
+    gs = fig.add_gridspec(1, 3, width_ratios=[4, 1, 0.3], wspace=0.1)
+    
+    ax_main = fig.add_subplot(gs[0])      # box plot + statistics
+    ax_sets = fig.add_subplot(gs[1])      # datasets
+    ax_legend = fig.add_subplot(gs[2])    # legend
+    ax_legend.axis('off')
+    
+    box_plot = sns.boxplot(data=df, 
+                y='Organ', 
+                x=metric_name,
+                hue='System',
+                palette=anatomical_system_colors,
+                whis=1.5,
+                showfliers=True,
+                flierprops={'marker': 'o',
+                           'markerfacecolor': 'black',
+                           'markeredgecolor': 'black',
+                           'markersize': 2,
+                           'alpha': 0.3},
+                ax=ax_main)
+    sns.stripplot(data=df,
+                 y='Organ',
+                 x=metric_name,
+                 color='black',
+                 size=2,
+                 alpha=0.3,
+                 jitter=0.2,
+                 ax=ax_main)
+    
+    handles, labels = ax_main.get_legend_handles_labels()
+    ax_main.get_legend().remove()
+    ax_legend.legend(handles, labels,
+                    title='Anatomical Systems',
+                    loc='upper left',
+                    fontsize=10,
+                    title_fontsize=12)
+    
+    # calc stat.
+    ordered_organs = df['Organ'].unique()
+    stats = df.groupby('Organ').agg({
+        metric_name: ['median', 'mean', 'std']
+    })[metric_name].reindex(ordered_organs)
+    
+    ax_main.set_yticks(range(len(ordered_organs)))
+    ax_main.set_yticklabels(ordered_organs, fontsize=10, ha='right')
+    ax_main.tick_params(axis='y', pad=5)
+    
+    right_edge = ax_main.get_xlim()[1]
+    ax_main.text(right_edge, -0.8,
+                'median',
+                va='bottom', ha='left', fontsize=10,
+                fontweight='bold', color='black')
+    ax_main.text(right_edge + 0.12, -0.8,
+                'mean±std',
+                va='bottom', ha='left', fontsize=10,
+                fontweight='bold', color='black')
+    
+    for i, (organ, row) in enumerate(stats.iterrows()):
+        median_str = f'{row["median"]:.3f}'
+        ax_main.text(right_edge, i,
+                    median_str,
+                    va='center',
+                    ha='left',
+                    fontsize=8,
+                    color='black',
+                    alpha=0.7)
+        mean_std_str = f'{row["mean"]:.3f}±{row["std"]:.3f}'
+        ax_main.text(right_edge + 0.12, i,
+                    mean_std_str,
+                    va='center',
+                    ha='left',
+                    fontsize=8,
+                    color='black',
+                    alpha=0.7)
+    
+    prev_system = None
+    for i, (idx, row) in enumerate(df.groupby('Organ').first().iterrows()):
+        if prev_system and row['System'] != prev_system:
+            ax_main.axhline(y=i-0.5, color='gray', linestyle='--', alpha=0.3)
+            ax_sets.axhline(y=i-0.5, color='gray', linestyle='--', alpha=0.3)
+        prev_system = row['System']
+    
+    ax_main.set_xlabel(metric_name, fontsize=12)
+    ax_main.set_title(title, pad=20, fontsize=14, fontweight='bold')
+    ax_main.grid(True, axis='x', linestyle='--', alpha=0.7)
+    ax_main.set_xlim(0, right_edge + 0.3)
+    ax_main.set_xticks(np.arange(0, 1.2, 0.2))
+    
+    all_datasets = sorted(list(set(
+        dataset for datasets in test_datasets_sources_dict.values() 
+        for dataset in datasets
+    )))
+    
+    for i, organ in enumerate(ordered_organs):
+        organ_name = organ.split(" (n=")[0]
+        if organ_name in test_datasets_sources_dict:
+            datasets = test_datasets_sources_dict[organ_name]
+            dataset_indices = [j for j, d in enumerate(all_datasets) if d in datasets]
+            if len(dataset_indices) > 1:
+                ax_sets.plot(dataset_indices, [i]*len(dataset_indices), 
+                           color='black', linewidth=1.5, alpha=0.5)
+            for j, dataset in enumerate(all_datasets):
+                if dataset in datasets:
+                    ax_sets.plot([j], [i], 'o', color='black', markersize=8)
+                else:
+                    ax_sets.plot([j], [i], 'o', color='lightgray', markersize=8)
+    
+    ax_sets.set_xticks(range(len(all_datasets)))
+    ax_sets.set_xticklabels(all_datasets, rotation=45, ha='right', fontsize=8)
+    ax_sets.set_title('Test Datasets', pad=5, fontsize=14, fontweight='bold')
+    ax_sets.set_yticks([])
+    
+    ylim = ax_main.get_ylim()
+    ax_sets.set_ylim(ylim)
+    
+    # add frame
+    for spine in ax_main.spines.values():
+        spine.set_visible(False)
+    for spine in ax_sets.spines.values():
+        spine.set_visible(False)
+        
+    ax_main.spines['left'].set_visible(True)
+    ax_main.spines['bottom'].set_visible(True)
+    ax_main.spines['right'].set_visible(True)
+    ax_main.spines['top'].set_visible(True)
+    
+    for spine in ax_main.spines.values():
+        if spine.get_visible():
+            spine.set_linewidth(1.0)
+    
+    ax_sets.spines['left'].set_visible(True)
+    ax_sets.spines['right'].set_visible(True)
+    ax_sets.spines['top'].set_visible(True)
+    ax_sets.spines['bottom'].set_visible(True)
+    
+    for spine in ax_sets.spines.values():
+        if spine.get_visible():
+            spine.set_linewidth(1.0)
+    
+    ylim = ax_main.get_ylim()
+    ax_sets.set_ylim(ylim)
+    
+    if output_path:
+        plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    
+    return ax_main, ax_sets, ax_legend
+
 def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, output_path, title="Radar Plot", 
                        circle_positions=None, system_groups=None):
     """
@@ -238,7 +416,7 @@ def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, 
         else:
             scores1.append(model1_scores[label])
     
-    angles = np.linspace(0, 2*pi, len(ordered_labels), endpoint=False)
+    angles = np.linspace(0, 2*np.pi, len(ordered_labels), endpoint=False)
     
     angles = np.concatenate((angles, [angles[0]]))
     scores1 = np.concatenate((scores1, [scores1[0]]))
@@ -305,7 +483,7 @@ def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, 
     # Add colored radial labels
     label_position = 1.05
     for i, (angle, label, color) in enumerate(zip(angles[:-1], ordered_labels, label_colors[:-1])):
-        angle_deg = angle * 180 / pi
+        angle_deg = angle * 180 / np.pi
         
         # Rotate text outward
         rotation = angle_deg

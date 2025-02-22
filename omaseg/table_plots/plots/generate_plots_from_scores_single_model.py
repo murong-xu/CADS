@@ -4,7 +4,7 @@ import numpy as np
 
 from omaseg.table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids
 from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed, structure_to_in_dist_training_dataset, anatomical_systems
-from omaseg.table_plots.plots.plot_functions import generate_box_plot
+from omaseg.table_plots.plots.plot_functions import generate_box_plot, generate_box_plot_with_testdata_sources
 
 
 def collect_scores(analysis_name, grouping_in_out_dist, prefix):
@@ -46,8 +46,11 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
         exit()
 
     experiments_dicts = {}
+    test_datasets_sources_dict = {}
     for experiment in experiment_to_name_dict.keys():
         structure_values = {distribution: {table_name: []
+                                        for table_name in table_names} for distribution in distributions}
+        test_datasets_sources = {distribution: {table_name: []
                                         for table_name in table_names} for distribution in distributions}
         excelfiles = list_specific_files(experiment_results_path[experiment], prefix=prefix, suffix='.xlsx')
         for file in excelfiles:
@@ -89,14 +92,18 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
                         if structure_is_in_dist and 'in' in structure_values:
                             structure_values['in'][table_names[j]].extend(
                                 values)
+                            test_datasets_sources['in'][table_names[j]].append(datasetname)
                         elif not structure_is_in_dist and 'out' in structure_values:
                             structure_values['out'][table_names[j]].extend(
                                 values)
+                            test_datasets_sources['out'][table_names[j]].append(datasetname)
                         if 'all' in structure_values:
                             structure_values['all'][table_names[j]].extend(
                                 values)
+                            test_datasets_sources['all'][table_names[j]].append(datasetname)
         experiments_dicts[experiment_to_name_dict[experiment]
                         ] = structure_values
+        test_datasets_sources_dict[experiment_to_name_dict[experiment]] = test_datasets_sources
 
     # Align scores: only remove NaNs
     for distribution in distributions:
@@ -118,12 +125,10 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
     #         experiments_dicts['OMASeg'][distribution][structure] = aligned_omaseg
     #         experiments_dicts['TotalSeg'][distribution][structure] = aligned_totalseg
 
-if __name__ == "__main__":
-    plot_dist = 'all'  # TODO:
-    plot_metric_name = 'Dice'  # TODO:
-    plot_output_path='/mnt/hdda/murong/22k/plots/per-structure/box_plot_all_dice.png'  # TODO:
-    plot_title='Structure-wise Dice Score Distribution'  # TODO:
+    return experiments_dicts, test_datasets_sources_dict
 
+
+if __name__ == "__main__":
     # Step 1) collect scores
     grouping_in_out_dist = 'group_by_omaseg_inout'  # 'group_by_omaseg_inout'/'group_by_totalseg_dataset'
     # analysis_name = 'scores_final'
@@ -132,11 +137,25 @@ if __name__ == "__main__":
     # analysis_name = 'original_GT_but_remove_limited_fov'
     prefix = 'dice'  # TODO:
 
-    experiments_dicts = collect_scores(analysis_name, grouping_in_out_dist, prefix)
+    experiments_dicts, test_datasets_sources_dict = collect_scores(analysis_name, grouping_in_out_dist, prefix)
 
     # Step 2) generate plot
+    plot_dist = 'all'  # TODO:
+    plot_metric_name = 'Dice'  # TODO:
+    plot_output_path='/mnt/hdda/murong/22k/plots/per-structure/box_plot_all_dice.png'  # TODO:
+    plot_title='Structure-wise Dice Score Distribution' 
     generate_box_plot(experiments_dicts['OMASeg'][plot_dist], 
                       metric_name=plot_metric_name, 
                       output_path=plot_output_path,
                       title=plot_title,
-                      anatomical_systems=anatomical_systems) 
+                      anatomical_systems=anatomical_systems)
+    # plot_dist = 'all'  # TODO:
+    # plot_metric_name = 'Dice'  # TODO:
+    # plot_output_path='/mnt/hdda/murong/22k/plots/per-structure/box_plot_with_testdata_sources_all_dice.png'  # TODO:
+    # plot_title='Structure-wise Dice Score Distribution' # TODO:
+    # generate_box_plot_with_testdata_sources(experiments_dicts['OMASeg'][plot_dist],
+    #                                         test_datasets_sources_dict['OMASeg'][plot_dist],
+    #                                         metric_name=plot_metric_name,
+    #                                         output_path=plot_output_path,
+    #                                         title=plot_title,
+    #                                         anatomical_systems=anatomical_systems)
