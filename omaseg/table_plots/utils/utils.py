@@ -85,11 +85,15 @@ def compare_models_stat_test(model1_results, model2_results, alpha=0.05, higher_
         'Significant After Correction': None
     } for structure in table_names}
 
+    aligned_results_1 = {}
+    aligned_results_2 = {}
     for organ, _ in model1_results.items():
         model1_scores = model1_results[organ]
         model2_scores = model2_results[organ]
 
         aligned_model1, aligned_model2 = align_and_filter_scores(model1_scores, model2_scores)
+        aligned_results_1[organ] = aligned_model1
+        aligned_results_2[organ] = aligned_model2
 
         # if TotalSeg doesn't have this target organ
         model2_all_zero = np.all(np.array(aligned_model2) == 0)
@@ -138,7 +142,7 @@ def compare_models_stat_test(model1_results, model2_results, alpha=0.05, higher_
                 stat_results[structure]['Better Model'] = None
     
     combined_results_df = pd.DataFrame(stat_results).T
-    return combined_results_df
+    return combined_results_df, aligned_results_1, aligned_results_2
 
 def benjamini_hochberg_correction(p_values, alpha=0.05):
     """

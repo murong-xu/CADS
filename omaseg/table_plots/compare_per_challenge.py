@@ -2,6 +2,7 @@ import pandas as pd
 import glob
 import os
 
+from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed
 from omaseg.table_plots.utils.utils import filter_rows, transitional_ids, amos_uterus_ids, compare_models_stat_test
 
 # TODO: param
@@ -79,7 +80,8 @@ for prefix in prefixes:
         higher_better = True
     else:
         higher_better = False
-        
+
+    original_to_index = {name: idx for idx, name in labelmap_all_structure.items()}    
     for dataset in datasets_eval:
         results_models = {}
         # Collect scores from models
@@ -96,14 +98,21 @@ for prefix in prefixes:
                 df = filter_rows(df, splits=splits)
 
                 for column in df.columns:
+                    if column in original_to_index:
+                        index = original_to_index[column]
+                        column_renamed = labelmap_all_structure_renamed[index]
+                    else:
+                        words = column.split()
+                        words[0] = words[0].capitalize()
+                        column_renamed = ' '.join(words)
                     if dataset == '0038_amos' and column == 'prostate':
                         df_tmp = pd.read_excel(xlsx_file)
                         df_tmp = df_tmp[~df_tmp["ids"].isin(amos_uterus_ids)]
                         df_tmp = filter_rows(df_tmp, splits=splits)
-                        challenge_results[column] = df_tmp[column].to_list()
+                        challenge_results[column_renamed] = df_tmp[column].to_list()
                     # Not drop NA here
                     else:
-                        challenge_results[column] = df[column].tolist()
+                        challenge_results[column_renamed] = df[column].tolist()
                 results_models[experiment] = challenge_results
             else:
                 xlsx_files = glob.glob(aux+f'/{prefix}*.xlsx')
@@ -115,12 +124,19 @@ for prefix in prefixes:
                     df = filter_rows(df, splits=splits)
 
                     for column in df.columns:
+                        if column in original_to_index:
+                            index = original_to_index[column]
+                            column_renamed = labelmap_all_structure_renamed[index]
+                        else:
+                            words = column.split()
+                            words[0] = words[0].capitalize()
+                            column_renamed = ' '.join(words)
                         # Not drop NA here
-                        challenge_results[column] = df[column].tolist()
+                        challenge_results[column_renamed] = df[column].tolist()
                     results_models[experiment] = challenge_results
 
         # Compre models
-        combined_results_df = compare_models_stat_test(
+        combined_results_df, _, _ = compare_models_stat_test(
             results_models['omaseg'], results_models['totalsegmentator'], alpha=significance_level, 
             higher_better=higher_better, do_benjamini_hochberg=do_benjamini_hochberg)
 

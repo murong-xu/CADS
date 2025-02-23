@@ -6,16 +6,15 @@ import seaborn as sns
 
 from omaseg.table_plots.plots.utils import anatomical_system_colors
 
+MODEL1_COLOR = "#0072BD"
+MODEL2_COLOR = "#FF0000"
 
 def generate_histogram_plot(model1_scores, model2_scores, model1_name, model2_name, 
                           output_path, metric_name, system_group, anatomical_systems):
     """
     Generate histogram plot comparing two models' performance for a specific anatomical system.
     NaNs should already be removed from model scroes!!
-    """
-    model1_color = "#0072BD"
-    model2_color = "#FF0000"
-    
+    """    
     organs = anatomical_systems[system_group]
     system_model1_scores = {}
     system_model2_scores = {}
@@ -50,9 +49,9 @@ def generate_histogram_plot(model1_scores, model2_scores, model1_name, model2_na
     width = 0.35
     
     rects1 = plt.bar(x - width/2, model1_means, width, yerr=model1_stds,
-                    label=model1_name, color=model1_color, alpha=0.5, capsize=5)
+                    label=model1_name, color=MODEL1_COLOR, alpha=0.5, capsize=5)
     rects2 = plt.bar(x + width/2, model2_means, width, yerr=model2_stds,
-                    label=model2_name, color=model2_color, alpha=0.5, capsize=5)
+                    label=model2_name, color=MODEL2_COLOR, alpha=0.5, capsize=5)
     
     plt.ylabel(metric_name, fontsize=12)
     plt.xlabel('Organs', fontsize=12)
@@ -69,6 +68,127 @@ def generate_histogram_plot(model1_scores, model2_scores, model1_name, model2_na
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close()
 
+
+def generate_boxplot_comparison(model1_scores, model2_scores, model1_name, model2_name, 
+                              stat_results, output_path, metric_name="Dice", datasetname=None):
+    """
+    Generate comparison boxplots for two models with significance annotations.
+    """
+    data_list = []
+    common_organs = sorted(set(model1_scores.keys()) & set(model2_scores.keys()))
+    
+    # skip all-zero cases (unique targets)
+    for organ in common_organs:
+        scores1 = model1_scores[organ]
+        if np.all(np.array(scores1) == 0):
+            scores1 = [None] * len(scores1)
+        for score in scores1:
+            if score is not None:
+                data_list.append({
+                    'Organ': organ,
+                    metric_name: score,
+                    'Model': model1_name
+                })
+        scores2 = model2_scores[organ]
+        if np.all(np.array(scores2) == 0):
+            scores2 = [None] * len(scores2)
+        for score in scores2:
+            if score is not None:
+                data_list.append({
+                    'Organ': organ,
+                    metric_name: score,
+                    'Model': model2_name
+                })
+    df = pd.DataFrame(data_list)
+    
+    min_width = 4
+    width_per_organ = 0.5
+    fig_width = max(min_width, len(common_organs) * width_per_organ)
+    box_width = min(0.9, 0.9 / min_width * len(common_organs))  # if only a few organs - smaller box
+    plt.figure(figsize=(fig_width, 8))
+    
+    color_dict = {
+        model1_name: MODEL1_COLOR,
+        model2_name: MODEL2_COLOR
+    }
+    ax = sns.boxplot(data=df, y=metric_name, x='Organ', hue='Model',
+                    palette=color_dict,
+                    width=box_width,
+                    showfliers=False)
+    sns.stripplot(data=df, y=metric_name, x='Organ', hue='Model',
+                 palette=color_dict,
+                 size=3, alpha=0.3, jitter=0.1, dodge=True)
+    
+    # decide the ylim
+    whisker_mins = []
+    whisker_maxs = []
+    for (organ, model), group in df.groupby(['Organ', 'Model']):
+        q1 = group[metric_name].quantile(0.25)
+        q3 = group[metric_name].quantile(0.75)
+        iqr = q3 - q1
+
+        lower_whisker = group[metric_name][group[metric_name] >= q1 - 1.5 * iqr].min()
+        upper_whisker = group[metric_name][group[metric_name] <= q3 + 1.5 * iqr].max()
+        whisker_mins.append(lower_whisker)
+        whisker_maxs.append(upper_whisker)
+    
+    y_min = min(whisker_mins) if whisker_mins else df[metric_name].min()
+    y_max = max(whisker_maxs) if whisker_maxs else df[metric_name].max()
+    y_range = y_max - y_min
+    
+    plt.ylim(y_min - 0.02 * y_range, y_max + 0.05 * y_range)
+
+    # add significance indicators
+    for i, organ in enumerate(common_organs):
+        if organ in stat_results:
+            result = stat_results[organ]
+            if result.get('p') is not None and isinstance(result['p'], (int, float)):
+                organ_data = df[df['Organ'] == organ]
+                y1 = organ_data[organ_data['Model'] == model1_name][metric_name].max()
+                y2 = organ_data[organ_data['Model'] == model2_name][metric_name].max()
+                x = i
+                
+                max_y = max(y1, y2)
+                y_max = organ_data[metric_name].max()
+                y_min = organ_data[metric_name].min()
+                fig = plt.gcf()
+                fig_width, fig_height = fig.get_size_inches()
+                bracket_width = box_width/2
+                bracket_height = y_range * 0.01
+                bracket_color = 'gray'
+                line_width = 1
+                
+                p_text = '**'
+                if result['Better Model'] == 'TotalSeg':
+                    significance_color = '#ED0DD9'
+                else:
+                    significance_color = '#15B01A'
+                plt.plot([x - bracket_width, x - bracket_width], 
+                        [max_y, max_y + bracket_height], 
+                        color=bracket_color, lw=line_width, alpha=0.7)
+                plt.plot([x + bracket_width, x + bracket_width], 
+                        [max_y, max_y + bracket_height], 
+                        color=bracket_color, lw=line_width, alpha=0.7)
+                plt.plot([x - bracket_width, x + bracket_width], 
+                        [max_y + bracket_height, max_y + bracket_height], 
+                        color=bracket_color, lw=line_width, alpha=0.7)
+                plt.text(x, max_y + bracket_height * 1.05, p_text,
+                        ha='center', va='bottom', 
+                        fontsize=12, 
+                        weight='bold', 
+                        color=significance_color)
+    
+    plt.title(f'{metric_name} Comparison on {datasetname}' if datasetname else f'{metric_name} Comparison',
+             pad=20, fontsize=10, fontweight='bold')
+    plt.grid(True, axis='y', linestyle='--', alpha=0.7)  
+    plt.xticks(rotation=45, ha='right')
+    plt.legend(title='Model', bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    if output_path:
+        os.makedirs(output_path, exist_ok=True)
+        output_file = os.path.join(output_path, f"{datasetname}.png")
+        plt.savefig(output_file, bbox_inches='tight', dpi=300)
+        plt.close()
 
 def generate_box_plot(results_dict, metric_name='DSC', output_path=None, title="Structure-wise Performance Distribution",
                      anatomical_systems=None):
@@ -370,9 +490,6 @@ def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, 
         model1_scores: baseline
         model2_scores: our model
     """
-
-    model1_color = "#0072BD"
-    model2_color = "#FF0000"
     # Set default circle positions if none provided
     if circle_positions is None:
         circle_positions = [0.2, 0.4, 0.6, 0.8, 1.0]
@@ -430,14 +547,14 @@ def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, 
     ax.spines['polar'].set_visible(False)
     
     # Fill in covered area
-    ax.fill(angles, scores1, color=model1_color, alpha=0.08, zorder=0)  # Baseline
-    ax.fill(angles, scores2, color=model2_color, alpha=0.06, zorder=1)  # OMASeg
+    ax.fill(angles, scores1, color=MODEL1_COLOR, alpha=0.08, zorder=0)  # Baseline
+    ax.fill(angles, scores2, color=MODEL2_COLOR, alpha=0.06, zorder=1)  # OMASeg
        
     # Plot data with markers
-    ax.plot(angles, scores1, 'o-', color=model1_color, linewidth=1, label=model1_name,
-            markersize=8, markerfacecolor=model1_color, markeredgecolor=model1_color, zorder=2)
-    ax.plot(angles, scores2, 'o-', color=model2_color, linewidth=3, label=model2_name,
-            markersize=8, markerfacecolor=model2_color, markeredgecolor=model2_color, zorder=3)
+    ax.plot(angles, scores1, 'o-', color=MODEL1_COLOR, linewidth=1, label=model1_name,
+            markersize=8, markerfacecolor=MODEL1_COLOR, markeredgecolor=MODEL1_COLOR, zorder=2)
+    ax.plot(angles, scores2, 'o-', color=MODEL2_COLOR, linewidth=3, label=model2_name,
+            markersize=8, markerfacecolor=MODEL2_COLOR, markeredgecolor=MODEL2_COLOR, zorder=3)
     
     # Unique targets
     for angle, score, label in zip(angles[:-1], scores2[:-1], ordered_labels):
