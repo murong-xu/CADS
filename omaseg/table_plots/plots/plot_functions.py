@@ -299,6 +299,7 @@ def generate_box_plot(results_dict, metric_name='DSC', output_path=None, title="
               title_fontsize=12)
     
     if output_path:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     
     return ax
@@ -482,26 +483,36 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
     
     return ax_main, ax_sets, ax_legend
 
-def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, output_path, title="Radar Plot", 
-                       circle_positions=None, system_groups=None):
+def generate_radar_plot_normalized_metrics(model1_scores, model2_scores, model1_name, model2_name, output_path, title="Radar Plot", 
+                       circle_positions=None, system_groups=None, highlight_high_scores=False, focus_point=0.9, power=3):
     """
-    Generate radar plot with structures grouped by anatomical systems.
-    Args:
-        model1_scores: baseline
-        model2_scores: our model
-    """
-    # Set default circle positions if none provided
-    if circle_positions is None:
-        circle_positions = [0.2, 0.4, 0.6, 0.8, 1.0]
+    Generate radar plot for normalized metrics (0-1 range, with 0 the worst and 1 the best).
     
-    # Reorder labels based on system groups if provided
+    Args:
+        circle_positions: custom circle positions
+        system_groups: anatomical system groups
+        highlight_high_scores: whether to use non-linear transformation to highlight high scores
+        focus_point: score value where non-linear transformation begins (default 0.9)
+        power: controls the strength of the non-linear transformation (default 3)
+    """
+    def highlight_transform(x, focus_point=0.9, power=2):
+        """
+        non-linear transformations
+        - parts lower than focus_point: remains linear display
+        - parts higher than focus_point: use an exponential function to make differences closer to 1 more significant
+        """
+        if np.isscalar(x):
+            if x < focus_point:
+                return 0.5 * x / focus_point
+            else:
+                normalized = (x - focus_point) / (1 - focus_point)
+                enhanced = np.exp(power * normalized) - 1 
+                max_enhanced = np.exp(power) - 1
+                return 0.5 + 0.5 * (enhanced / max_enhanced)
+        return np.array([highlight_transform(val, focus_point, power) for val in x])
+
     if system_groups:
-        # Generate a color map for systems
-        # n_systems = len(system_groups)
-        # colors = plt.cm.tab20(np.linspace(0, 1, n_systems))
         system_colors = anatomical_system_colors
-        
-        # Create ordered list of labels and their colors
         ordered_labels = []
         label_colors = []
         for system, structures in system_groups.items():
@@ -509,7 +520,6 @@ def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, 
             ordered_labels.extend(valid_structures)
             label_colors.extend([system_colors[system]] * len(valid_structures))
         
-        # Check if all structures are included
         all_structures = set(model2_scores.keys())
         grouped_structures = set(ordered_labels)
         ungrouped = all_structures - grouped_structures
@@ -519,59 +529,104 @@ def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, 
     else:
         ordered_labels = list(model2_scores.keys())
         label_colors = [[0, 0, 0, 1.0]] * len(ordered_labels)
-    
-    # Find unique structures
+
+    # find unique structures
     unique_structures = [struct for struct in model2_scores.keys() 
                         if struct not in model1_scores or np.isnan(model1_scores[struct])]
-    
+
+    # prepare scores
     scores1 = []
     scores2 = []
     for label in ordered_labels:
         scores2.append(model2_scores[label])
         if label in unique_structures:
-            scores1.append(0.0)  # unique structures in baseline: set to 0
+            scores1.append(0.0)  # unique structures set to 0
         else:
             scores1.append(model1_scores[label])
-    
-    angles = np.linspace(0, 2*np.pi, len(ordered_labels), endpoint=False)
-    
-    angles = np.concatenate((angles, [angles[0]]))
-    scores1 = np.concatenate((scores1, [scores1[0]]))
-    scores2 = np.concatenate((scores2, [scores2[0]]))
-    label_colors.append(label_colors[0])
-    
+
+    if highlight_high_scores:
+        if circle_positions is None:
+            circle_positions = [
+                0.2, 0.4, 0.6, 0.8,  # sparse scales in low scoring areas
+                0.90, 0.92, 0.94, 0.96, 0.98, 1.0  # dense scales in high scoring areas
+            ]
+        transformed_scores1 = highlight_transform(scores1, focus_point, power)
+        transformed_scores2 = highlight_transform(scores2, focus_point, power)
+        transformed_circles = highlight_transform(circle_positions, focus_point, power)
+    else:
+        if circle_positions is None:
+            circle_positions = [0.2, 0.4, 0.6, 0.8, 0.85, 0.9, 0.95, 1.0]
+        transformed_scores1 = scores1
+        transformed_scores2 = scores2
+        transformed_circles = circle_positions
+
     fig = plt.figure(figsize=(30, 30))
     fig.suptitle(title, fontsize=50, y=0.95)
-    
     ax = fig.add_subplot(111, projection='polar')
     ax.spines['polar'].set_visible(False)
-    
-    # Fill in covered area
-    ax.fill(angles, scores1, color=MODEL1_COLOR, alpha=0.08, zorder=0)  # Baseline
-    ax.fill(angles, scores2, color=MODEL2_COLOR, alpha=0.06, zorder=1)  # OMASeg
-       
-    # Plot data with markers
-    ax.plot(angles, scores1, 'o-', color=MODEL1_COLOR, linewidth=1, label=model1_name,
-            markersize=8, markerfacecolor=MODEL1_COLOR, markeredgecolor=MODEL1_COLOR, zorder=2)
-    ax.plot(angles, scores2, 'o-', color=MODEL2_COLOR, linewidth=3, label=model2_name,
-            markersize=8, markerfacecolor=MODEL2_COLOR, markeredgecolor=MODEL2_COLOR, zorder=3)
-    
-    # Unique targets
-    for angle, score, label in zip(angles[:-1], scores2[:-1], ordered_labels):
+
+    angles = np.linspace(0, 2*np.pi, len(ordered_labels), endpoint=False)
+    angles = np.concatenate((angles, [angles[0]]))
+    transformed_scores1 = np.concatenate((transformed_scores1, [transformed_scores1[0]]))
+    transformed_scores2 = np.concatenate((transformed_scores2, [transformed_scores2[0]]))
+    label_colors.append(label_colors[0])
+
+    ax.fill(angles, transformed_scores1, color=MODEL1_COLOR, alpha=0.08, zorder=0)
+    ax.fill(angles, transformed_scores2, color=MODEL2_COLOR, alpha=0.06, zorder=1)
+
+    ax.plot(angles, transformed_scores1, 'o-', color=MODEL1_COLOR, linewidth=1, 
+            label=model1_name, markersize=8, markerfacecolor=MODEL1_COLOR, 
+            markeredgecolor=MODEL1_COLOR, zorder=2)
+    ax.plot(angles, transformed_scores2, 'o-', color=MODEL2_COLOR, linewidth=3, 
+            label=model2_name, markersize=8, markerfacecolor=MODEL2_COLOR, 
+            markeredgecolor=MODEL2_COLOR, zorder=3)
+
+    for angle, score, label in zip(angles[:-1], transformed_scores2[:-1], ordered_labels):
         if label in unique_structures:
             ax.plot(angle, score, 'X', color='#03c03c', markersize=12, 
                    markerfacecolor='#03c03c', markeredgecolor='#03c03c', zorder=4)
-            
-    unique_marker = plt.Line2D([], [], 
-                              marker='X',
-                              color='#03c03c',
-                              markerfacecolor='#03c03c',
-                              markeredgecolor='#03c03c',
-                              markersize=8,
-                              linestyle='None',
-                              label='OMASeg Unique')
+
+    unique_marker = plt.Line2D([], [], marker='X', color='#03c03c',
+                              markerfacecolor='#03c03c', markeredgecolor='#03c03c',
+                              markersize=8, linestyle='None', label='OMASeg Unique')
     handles, labels = ax.get_legend_handles_labels()
     handles.append(unique_marker)
+
+    ax.set_rlabel_position(0)
+    plt.yticks(transformed_circles, 
+               [f"{pos:.2f}" for pos in circle_positions],
+               color="grey", size=10)
+
+    for circle in transformed_circles:
+        ax.plot(angles, [circle]*len(angles), '--', color='grey', alpha=0.2)
+
+    for angle in angles[:-1]:
+        ax.plot([angle, angle], [0, 1.1], 
+                '--', color='grey', alpha=0.3, linewidth=0.5)
+
+    ax.set_xticks([])
+
+    max_r = 1
+    label_radius = max_r * 1.05
+    ax.set_rmax(max_r * 1.2)
+
+    for i, (angle, label, color) in enumerate(zip(angles[:-1], ordered_labels, label_colors[:-1])):
+        angle_deg = angle * 180 / np.pi
+        rotation = angle_deg
+        if 90 < angle_deg <= 270:
+            rotation += 180
+            ha = 'right'
+        else:
+            ha = 'left'
+        
+        ax.text(angle, label_radius, label,
+                rotation=rotation,
+                ha=ha,
+                va='center',
+                rotation_mode='anchor',
+                fontsize=22,
+                color=color)
+
     model_legend = ax.legend(handles=handles,
                             loc='center left', 
                             bbox_to_anchor=(1.05, 0.95),
@@ -579,57 +634,8 @@ def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, 
                             title="Models",
                             title_fontsize=25)
     ax.add_artist(model_legend)
-    
-    # Add background circles
-    ax.set_rlabel_position(0)
-    plt.yticks(circle_positions, 
-               [f"{pos:.1f}" for pos in circle_positions],
-               color="grey", size=10)
-    
-    # Add dotted circles
-    for circle in circle_positions:
-        ax.plot(angles, [circle]*len(angles), '--', color='grey', alpha=0.2)
-    
-    # Add radial grid lines
-    for angle in angles[:-1]:
-        ax.plot([angle, angle], [0, 1], '--', color='grey', alpha=0.3, linewidth=0.5)
-    
-    # Remove default axis labels
-    ax.set_xticks([])
-    
-    # Add colored radial labels
-    label_position = 1.05
-    for i, (angle, label, color) in enumerate(zip(angles[:-1], ordered_labels, label_colors[:-1])):
-        angle_deg = angle * 180 / np.pi
-        
-        # Rotate text outward
-        rotation = angle_deg
-        if 90 < angle_deg <= 270:
-            rotation += 180
-            
-        # Determine text alignment based on rotated angle
-        if 90 < angle_deg <= 270:
-            ha = 'right'
-        else:
-            ha = 'left'
-            
-        ax.text(angle, label_position, label,
-                rotation=rotation,
-                ha=ha,
-                va='center',
-                rotation_mode='anchor',
-                fontsize=22,
-                color=color)
-        
+
     if system_groups:
-        # First add model legend
-        # model_legend = ax.legend(loc='center left', 
-        #                        bbox_to_anchor=(1.05, 0.8),
-        #                        fontsize=20,
-        #                        title="Models",
-        #                        title_fontsize=25)
-        
-        # Add system legend below the model legend
         system_patches = [plt.Rectangle((0, 0), 1, 1, fc=system_colors[system]) 
                          for system in system_groups.keys()]
         system_legend = ax.legend(system_patches, 
@@ -639,18 +645,191 @@ def generate_radar_plot(model1_scores, model2_scores, model1_name, model2_name, 
                                 title="Anatomical Systems", 
                                 fontsize=20, 
                                 title_fontsize=25)
-        
-        # Make sure both legends are visible
         ax.add_artist(model_legend)
-    # else:
-    #     # Only add model legend if no system groups
-    #     ax.legend(loc='center left', 
-    #              bbox_to_anchor=(1.05, 0.8), 
-    #              fontsize=25,
-    #              title="Models",
-    #             title_fontsize=30)
-    
-    ax.set_rmax(1.2)
+
+    if highlight_high_scores:
+        plt.figtext(0.95, 0.15, 
+                   f"* Non-linear scale enhancement above {focus_point:.2f}\n" +
+                   "* For unique targets in OMASeg, the other model's score is set to 0",
+                   fontsize=12, ha='right', style='italic')
+    else:
+        plt.figtext(0.95, 0.15, 
+                   "* For unique targets in OMASeg, the other model's score is set to 0",
+                   fontsize=12, ha='right', style='italic')
+
     plt.tight_layout()
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    plt.savefig(output_path, dpi=300, bbox_inches='tight', pad_inches=0.5)
+    plt.close()
+
+
+def generate_radar_plot_distance_metrics(model1_scores, model2_scores, model1_name, model2_name, output_path, title="Radar Plot", 
+                       circle_positions=None, system_groups=None):
+    """
+    Generate radar plot with logarithmic scale. For metrics where lower is better (e.g., HD95),
+    unique targets in model1 are set to 1.2 * max_score to indicate non-existing performance.
+    """
+    def log_transform(x, min_val=0.1):
+        if np.isscalar(x):
+            if x <= 0:
+                return np.log10(min_val)
+            return np.log10(x + min_val)
+        return np.array([log_transform(val, min_val) for val in x])
+
+    if system_groups:
+        system_colors = anatomical_system_colors
+        ordered_labels = []
+        label_colors = []
+        for system, structures in system_groups.items():
+            valid_structures = [s for s in structures if s in model2_scores]
+            ordered_labels.extend(valid_structures)
+            label_colors.extend([system_colors[system]] * len(valid_structures))
+        
+        all_structures = set(model2_scores.keys())
+        grouped_structures = set(ordered_labels)
+        ungrouped = all_structures - grouped_structures
+        if ungrouped:
+            ordered_labels.extend(sorted(ungrouped))
+            label_colors.extend([[0.7, 0.7, 0.7, 1.0]] * len(ungrouped))
+    else:
+        ordered_labels = list(model2_scores.keys())
+        label_colors = [[0, 0, 0, 1.0]] * len(ordered_labels)
+
+    # unique structures
+    unique_structures = [struct for struct in model2_scores.keys() 
+                        if struct not in model1_scores or np.isnan(model1_scores[struct])]
+
+    # find the min/max value of scores
+    all_valid_scores = []
+    all_valid_scores.extend([s for s in model1_scores.values() if not np.isnan(s)])
+    all_valid_scores.extend([s for s in model2_scores.values() if not np.isnan(s)])
+    min_score = min(all_valid_scores)
+    max_score = max(all_valid_scores)
+    unique_target_score = max_score * 1.2  # unique targets
+
+    # circle positions
+    if circle_positions is None:
+        magnitude = int(np.log10(max_score))
+        circle_positions = []
+        for exp in range(-1, magnitude + 1):
+            # add more scales to each order of magnitude
+            circle_positions.extend([
+                1 * 10**exp,  # 1, 10, 100, ...
+                2 * 10**exp,  # 2, 20, 200, ...
+                3 * 10**exp,  # 3, 30, 300, ...
+                5 * 10**exp,  # 5, 50, 500, ...
+                8 * 10**exp   # 8, 80, 800, ...
+            ])        
+        circle_positions = sorted([pos for pos in circle_positions 
+                                 if min_score <= pos <= unique_target_score])
+
+    # prepare scores
+    scores1 = []
+    scores2 = []
+    for label in ordered_labels:
+        scores2.append(model2_scores[label])
+        if label in unique_structures:
+            scores1.append(unique_target_score)
+        else:
+            scores1.append(model1_scores[label])
+
+    # log transform
+    log_scores1 = log_transform(scores1)
+    log_scores2 = log_transform(scores2)
+    log_circle_positions = log_transform(circle_positions)
+
+    fig = plt.figure(figsize=(30, 30))
+    fig.suptitle(title, fontsize=50, y=0.95)
+    ax = fig.add_subplot(111, projection='polar')
+    ax.spines['polar'].set_visible(False)
+
+    angles = np.linspace(0, 2*np.pi, len(ordered_labels), endpoint=False)
+    angles = np.concatenate((angles, [angles[0]]))
+    log_scores1 = np.concatenate((log_scores1, [log_scores1[0]]))
+    log_scores2 = np.concatenate((log_scores2, [log_scores2[0]]))
+    label_colors.append(label_colors[0])
+
+    ax.fill(angles, log_scores1, color=MODEL1_COLOR, alpha=0.08, zorder=0)
+    ax.fill(angles, log_scores2, color=MODEL2_COLOR, alpha=0.06, zorder=1)
+
+    ax.plot(angles, log_scores1, 'o-', color=MODEL1_COLOR, linewidth=1, 
+            label=model1_name, markersize=8, markerfacecolor=MODEL1_COLOR, 
+            markeredgecolor=MODEL1_COLOR, zorder=2)
+    ax.plot(angles, log_scores2, 'o-', color=MODEL2_COLOR, linewidth=3, 
+            label=model2_name, markersize=8, markerfacecolor=MODEL2_COLOR, 
+            markeredgecolor=MODEL2_COLOR, zorder=3)
+
+    for angle, score, label in zip(angles[:-1], log_scores2[:-1], ordered_labels):
+        if label in unique_structures:
+            ax.plot(angle, score, 'X', color='#03c03c', markersize=12, 
+                   markerfacecolor='#03c03c', markeredgecolor='#03c03c', zorder=4)
+
+    unique_marker = plt.Line2D([], [], marker='X', color='#03c03c',
+                              markerfacecolor='#03c03c', markeredgecolor='#03c03c',
+                              markersize=8, linestyle='None', label='OMASeg Unique')
+    handles, labels = ax.get_legend_handles_labels()
+    handles.append(unique_marker)
+
+    ax.set_rlabel_position(0)
+    plt.yticks(log_circle_positions, 
+               [f"{pos:.1f}" for pos in circle_positions],
+               color="grey", size=10)
+
+    for log_circle in log_circle_positions:
+        ax.plot(angles, [log_circle]*len(angles), '--', color='grey', alpha=0.2)
+
+    for angle in angles[:-1]:
+        ax.plot([angle, angle], [log_transform(min_score), log_transform(unique_target_score)], 
+                '--', color='grey', alpha=0.3, linewidth=0.5)
+
+    ax.set_xticks([])
+
+    max_r = log_transform(unique_target_score)
+    label_radius = max_r * 1.05
+    ax.set_rmax(max_r * 1.2)
+
+    for i, (angle, label, color) in enumerate(zip(angles[:-1], ordered_labels, label_colors[:-1])):
+        angle_deg = angle * 180 / np.pi
+        rotation = angle_deg
+        if 90 < angle_deg <= 270:
+            rotation += 180
+            ha = 'right'
+        else:
+            ha = 'left'
+        
+        ax.text(angle, label_radius, label,
+                rotation=rotation,
+                ha=ha,
+                va='center',
+                rotation_mode='anchor',
+                fontsize=22,
+                color=color)
+
+    model_legend = ax.legend(handles=handles,
+                            loc='center left', 
+                            bbox_to_anchor=(1.05, 0.95),
+                            fontsize=20,
+                            title="Models",
+                            title_fontsize=25)
+    ax.add_artist(model_legend)
+
+    if system_groups:
+        system_patches = [plt.Rectangle((0, 0), 1, 1, fc=system_colors[system]) 
+                         for system in system_groups.keys()]
+        system_legend = ax.legend(system_patches, 
+                                system_groups.keys(), 
+                                loc='center left', 
+                                bbox_to_anchor=(1.05, 0.7),
+                                title="Anatomical Systems", 
+                                fontsize=20, 
+                                title_fontsize=25)
+        ax.add_artist(model_legend)
+
+    plt.figtext(0.95, 0.15, 
+                "* For unique targets in OMASeg, the other model's score is set to 1.2 × maximum score for visualization",
+                fontsize=12, ha='right', style='italic')
+
+    plt.tight_layout()
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     plt.savefig(output_path, dpi=300, bbox_inches='tight', pad_inches=0.5)
     plt.close()
