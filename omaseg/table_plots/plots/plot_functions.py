@@ -59,8 +59,25 @@ def generate_histogram_plot(model1_scores, model2_scores, model1_name, model2_na
     plt.xticks(x, organs, rotation=45, ha='right')
     plt.legend(fontsize=10)
     
+    # acquire actual score limits
+    all_means = []
+    all_stds = []
+    
+    for organ in organs:
+        scores1 = np.array(model1_scores[organ])
+        all_means.append(np.mean(scores1))
+        all_stds.append(np.std(scores1))
+        
+        scores2 = np.array(model2_scores[organ])
+        all_means.append(np.mean(scores2))
+        all_stds.append(np.std(scores2))
+    
+    max_mean = max(all_means)
+    max_std = max(all_stds)
+    y_max = max_mean + max_std
+    
     plt.grid(True, axis='y', linestyle='--', alpha=0.7)
-    plt.ylim(0, 1.1)
+    plt.ylim(0, y_max * 1.1)
     plt.tight_layout()
     
     os.makedirs(output_path, exist_ok=True)

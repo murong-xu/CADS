@@ -2,7 +2,7 @@ import pandas as pd
 import os
 
 from omaseg.table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids
-from omaseg.dataset_utils.bodyparts_labelmaps import anatomical_systems, labelmap_all_structure, labelmap_all_structure_renamed, structure_to_in_dist_training_dataset
+from omaseg.dataset_utils.bodyparts_labelmaps import anatomical_systems, labelmap_all_structure, labelmap_all_structure_renamed, structure_to_in_dist_training_dataset, totalseg_exclude_to_compare
 from omaseg.table_plots.plots.plot_functions import generate_histogram_plot
 
 
@@ -28,7 +28,7 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
             'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_remove_limited_fov/test_0',
         }
     
-    distributions = ['in', ' out', 'all']
+    distributions = ['in', 'out', 'all']
     splits = ['test']
     filter_transitional_in_verse = True
 
@@ -112,6 +112,8 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
 
             aligned_omaseg, aligned_totalseg = align_and_filter_scores(
                 omaseg_scores, totalseg_scores)
+            if structure in totalseg_exclude_to_compare:
+                aligned_totalseg = len(aligned_omaseg) * [0]
 
             experiments_dicts['OMASeg'][distribution][structure] = aligned_omaseg
             experiments_dicts['TotalSeg'][distribution][structure] = aligned_totalseg
@@ -120,29 +122,38 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
 
 
 if __name__ == "__main__":
-    # Step 1) collect scores
+    result_types = [
+        'filtered_unreliable_and_limited_fov',
+        'filtered_unreliable',
+        'original_GT_but_remove_limited_fov',
+        'scores_final', 
+        ]
+    metrics = [
+        'dice',
+        'hd',
+        'hd95',
+        'normalized_distance'
+    ]
+
     grouping_in_out_dist = 'group_by_omaseg_inout'  # 'group_by_omaseg_inout'/'group_by_totalseg_dataset'
-    # analysis_name = 'scores_final'
-    analysis_name = 'filtered_unreliable_and_limited_fov'
-    # analysis_name = 'filtered_unreliable'
-    # analysis_name = 'original_GT_but_remove_limited_fov'
-    prefix = 'dice'  # TODO:
+    plot_dist = 'all'
+    
+    for result_type in result_types:
+        for metric in metrics:
+            # Step 1) collect scores
+            experiments_dicts, test_datasets_sources_dict = collect_scores(result_type, grouping_in_out_dist, metric)
 
-    experiments_dicts, test_datasets_sources_dict = collect_scores(analysis_name, grouping_in_out_dist, prefix)
-
-    # Step 2) generate plot
-    plot_dist = 'all'  # TODO:
-    plot_metric_name = 'Dice'  # TODO:
-    plot_output_path = "/mnt/hdda/murong/22k/plots/per-structure/per-system_histogram_compare_dice"  # TODO:
-    list_anatomical_systems = list(anatomical_systems.keys())
-    for anatomical_system in list_anatomical_systems:
-        generate_histogram_plot(
-            model1_scores=experiments_dicts['TotalSeg'][plot_dist],
-            model2_scores=experiments_dicts['OMASeg'][plot_dist],
-            model1_name='TotalSeg',
-            model2_name='OMASeg',
-            output_path=plot_output_path,
-            metric_name=plot_metric_name,
-            system_group=anatomical_system,
-            anatomical_systems=anatomical_systems
-        )
+            # Step 2) generate plot
+            plot_output_path = f"/mnt/hdda/murong/22k/plots/{result_type}/per_structure/per-system_histogram_compare_{metric}"
+            list_anatomical_systems = list(anatomical_systems.keys())
+            for anatomical_system in list_anatomical_systems:
+                generate_histogram_plot(
+                    model1_scores=experiments_dicts['TotalSeg'][plot_dist],
+                    model2_scores=experiments_dicts['OMASeg'][plot_dist],
+                    model1_name='TotalSeg',
+                    model2_name='OMASeg',
+                    output_path=plot_output_path,
+                    metric_name=metric.capitalize().replace('_', ' '),
+                    system_group=anatomical_system,
+                    anatomical_systems=anatomical_systems
+                )
