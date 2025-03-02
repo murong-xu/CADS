@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import numpy as np
 
 from omaseg.table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids
 from omaseg.dataset_utils.bodyparts_labelmaps import anatomical_systems, labelmap_all_structure, labelmap_all_structure_renamed, structure_to_in_dist_training_dataset, totalseg_exclude_to_compare
@@ -110,10 +111,14 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
             omaseg_scores = experiments_dicts['OMASeg'][distribution][structure]
             totalseg_scores = experiments_dicts['TotalSeg'][distribution][structure]
 
-            aligned_omaseg, aligned_totalseg = align_and_filter_scores(
-                omaseg_scores, totalseg_scores)
             if structure in totalseg_exclude_to_compare:
+                scores_1 = np.array(omaseg_scores)
+                scores_1 = scores_1[~np.isnan(scores_1)]
+                aligned_omaseg = scores_1
                 aligned_totalseg = len(aligned_omaseg) * [0]
+            else:
+                aligned_omaseg, aligned_totalseg = align_and_filter_scores(
+                    omaseg_scores, totalseg_scores)
 
             experiments_dicts['OMASeg'][distribution][structure] = aligned_omaseg
             experiments_dicts['TotalSeg'][distribution][structure] = aligned_totalseg

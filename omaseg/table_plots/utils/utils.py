@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-from omaseg.dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
+from omaseg.dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps, totalseg_exclude_to_compare
 
 
 def filter_rows(dataframe, splits=['test']):
@@ -90,19 +90,23 @@ def compare_models_stat_test(model1_results, model2_results, alpha=0.05, higher_
     for organ, _ in model1_results.items():
         model1_scores = model1_results[organ]
         model2_scores = model2_results[organ]
-
-        aligned_model1, aligned_model2 = align_and_filter_scores(model1_scores, model2_scores)
-        aligned_results_1[organ] = aligned_model1
-        aligned_results_2[organ] = aligned_model2
-
+        
         # if TotalSeg doesn't have this target organ
-        model2_all_zero = np.all(np.array(aligned_model2) == 0)
-        if model2_all_zero:
+        if organ in totalseg_exclude_to_compare:
+            scores_1 = np.array(model1_scores)
+            scores_1 = scores_1[~np.isnan(scores_1)]
+            aligned_model1 = scores_1
             stat_results[organ].update({
                 'OMASeg mean±std': f"{np.mean(aligned_model1):.4f}±{np.std(aligned_model1):.4f}",
                 'OMASeg median': np.median(aligned_model1),
                 })
+            aligned_results_1[organ]  = aligned_model1
+            aligned_results_2[organ] = len(aligned_model1) * [0]
             continue
+
+        aligned_model1, aligned_model2 = align_and_filter_scores(model1_scores, model2_scores)
+        aligned_results_1[organ] = aligned_model1
+        aligned_results_2[organ] = aligned_model2
 
         result = check_distribution_perform_stat_test(
             aligned_model1, 
