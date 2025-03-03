@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-from omaseg.dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps, totalseg_exclude_to_compare
+from omaseg.dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
 
 
 def filter_rows(dataframe, splits=['test']):
@@ -59,7 +59,9 @@ def get_task_id(structure):
     return None 
 
 
-def compare_models_stat_test(model1_results, model2_results, alpha=0.05, higher_better=True, do_benjamini_hochberg=False):    
+def compare_models_stat_test(model1_results, model2_results, alpha=0.05, higher_better=True, do_benjamini_hochberg=False, totalseg_exclude_to_compare=None):    
+    if totalseg_exclude_to_compare == None:
+        from omaseg.dataset_utils.bodyparts_labelmaps import totalseg_exclude_to_compare
     # Collect all p-values
     p_values = []
     p_value_to_structure = {}
