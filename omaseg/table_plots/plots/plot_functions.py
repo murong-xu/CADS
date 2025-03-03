@@ -10,7 +10,7 @@ MODEL1_COLOR = "#0072BD"
 MODEL2_COLOR = "#FF0000"
 
 def generate_histogram_plot(model1_scores, model2_scores, model1_name, model2_name, 
-                          output_path, metric_name, system_group, anatomical_systems):
+                          stat_results, output_path, metric_name, system_group, anatomical_systems):
     """
     Generate histogram plot comparing two models' performance for a specific anatomical system.
     NaNs should already be removed from model scroes!!
@@ -79,6 +79,46 @@ def generate_histogram_plot(model1_scores, model2_scores, model1_name, model2_na
     plt.grid(True, axis='y', linestyle='--', alpha=0.7)
     plt.ylim(0, y_max * 1.1)
     plt.tight_layout()
+    y_range = y_max
+
+    # add significance indicators
+    for i, organ in enumerate(organs):
+        if organ in stat_results:
+            result = stat_results[organ]
+            if result.get('p') is not None and isinstance(result['p'], (int, float)):
+                x = i
+                current_max = max(
+                    model1_means[i] + model1_stds[i],
+                    model2_means[i] + model2_stds[i]
+                )
+                
+                fig = plt.gcf()
+                bracket_width = width/2 
+                bracket_height = y_range * 0.01
+                bracket_color = 'gray'
+                line_width = 1
+                
+                p_text = '**'
+                if result['Better Model'] == 'TotalSeg':
+                    significance_color = MODEL1_COLOR
+                else:
+                    significance_color = MODEL2_COLOR
+                
+                plt.plot([x - bracket_width, x - bracket_width], 
+                        [current_max, current_max + bracket_height], 
+                        color=bracket_color, lw=line_width, alpha=0.7)
+                plt.plot([x + bracket_width, x + bracket_width], 
+                        [current_max, current_max + bracket_height], 
+                        color=bracket_color, lw=line_width, alpha=0.7)
+                plt.plot([x - bracket_width, x + bracket_width], 
+                        [current_max + bracket_height, current_max + bracket_height], 
+                        color=bracket_color, lw=line_width, alpha=0.7)
+                
+                plt.text(x, current_max + bracket_height * 1.05, p_text,
+                        ha='center', va='bottom', 
+                        fontsize=12, 
+                        weight='bold', 
+                        color=significance_color)
     
     os.makedirs(output_path, exist_ok=True)
     output_file = os.path.join(output_path, f"{system_group.replace(' ', '_')}.png")

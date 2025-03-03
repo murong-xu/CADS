@@ -1,13 +1,12 @@
 import pandas as pd
 import os
-import numpy as np
 
-from omaseg.table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids
-from omaseg.dataset_utils.bodyparts_labelmaps import anatomical_systems, labelmap_all_structure, labelmap_all_structure_renamed, structure_to_in_dist_training_dataset, totalseg_exclude_to_compare
+from omaseg.table_plots.utils.utils import filter_rows, list_specific_files, transitional_ids, amos_uterus_ids, compare_models_stat_test
+from omaseg.dataset_utils.bodyparts_labelmaps import anatomical_systems, labelmap_all_structure, labelmap_all_structure_renamed, structure_to_in_dist_training_dataset
 from omaseg.table_plots.plots.plot_functions import generate_histogram_plot
 
 
-def collect_scores(analysis_name, grouping_in_out_dist, prefix):
+def collect_scores(analysis_name, grouping_in_out_dist, prefix, distribution):
     if analysis_name == 'filtered_unreliable_and_limited_fov':
         experiment_results_path = {
             'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT/test_0',
@@ -29,9 +28,15 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
             'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_remove_limited_fov/test_0',
         }
     
-    distributions = ['in', 'out', 'all']
     splits = ['test']
     filter_transitional_in_verse = True
+    significance_level = 0.05  #TODO: test more values
+    do_benjamini_hochberg = False
+
+    if prefix in ['dice', 'normalized_distance']:
+        higher_better = True
+    else:
+        higher_better = False
 
     experiment_to_name_dict = {
         'omaseg': 'OMASeg',
@@ -48,10 +53,8 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
     experiments_dicts = {}
     test_datasets_sources_dict = {}
     for experiment in experiment_to_name_dict.keys():
-        structure_values = {distribution: {table_name: []
-                                        for table_name in table_names} for distribution in distributions}
-        test_datasets_sources = {distribution: {table_name: []
-                                        for table_name in table_names} for distribution in distributions}
+        structure_values = {distribution: {table_name: [] for table_name in table_names}}
+        test_datasets_sources = {distribution: {table_name: [] for table_name in table_names}}
         excelfiles = list_specific_files(experiment_results_path[experiment], prefix=prefix, suffix='.xlsx')
         for file in excelfiles:
             base = os.path.basename(file)
@@ -106,24 +109,21 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
         test_datasets_sources_dict[experiment_to_name_dict[experiment]] = test_datasets_sources
     
     # Align scores
-    for distribution in distributions:
-        for structure in table_names:
-            omaseg_scores = experiments_dicts['OMASeg'][distribution][structure]
-            totalseg_scores = experiments_dicts['TotalSeg'][distribution][structure]
+    combined_results_df, aligned_omaseg, aligned_totalseg = compare_models_stat_test(
+        experiments_dicts['OMASeg'][distribution], experiments_dicts['TotalSeg'][distribution], alpha=significance_level,
+        higher_better=higher_better, do_benjamini_hochberg=do_benjamini_hochberg)
 
-            if structure in totalseg_exclude_to_compare:
-                scores_1 = np.array(omaseg_scores)
-                scores_1 = scores_1[~np.isnan(scores_1)]
-                aligned_omaseg = scores_1
-                aligned_totalseg = len(aligned_omaseg) * [0]
-            else:
-                aligned_omaseg, aligned_totalseg = align_and_filter_scores(
-                    omaseg_scores, totalseg_scores)
-
-            experiments_dicts['OMASeg'][distribution][structure] = aligned_omaseg
-            experiments_dicts['TotalSeg'][distribution][structure] = aligned_totalseg
+    stat_results = {}
+    all_organs = combined_results_df['Organ'].unique()
+    for organ in all_organs:
+        row = combined_results_df[combined_results_df['Organ'] == organ]
+        if not row.empty and row['Better Model'].iloc[0]:
+            stat_results[organ] = {
+                'Better Model': row['Better Model'].iloc[0],
+                'p': row['p-value'].iloc[0]
+            }
     
-    return experiments_dicts, test_datasets_sources_dict
+    return aligned_omaseg, aligned_totalseg, stat_results
 
 
 if __name__ == "__main__":
@@ -146,17 +146,18 @@ if __name__ == "__main__":
     for result_type in result_types:
         for metric in metrics:
             # Step 1) collect scores
-            experiments_dicts, test_datasets_sources_dict = collect_scores(result_type, grouping_in_out_dist, metric)
+            aligned_omaseg, aligned_totalseg, stat_results = collect_scores(result_type, grouping_in_out_dist, metric, plot_dist)
 
             # Step 2) generate plot
             plot_output_path = f"/mnt/hdda/murong/22k/plots/{result_type}/per_structure/per-system_histogram_compare_{metric}"
             list_anatomical_systems = list(anatomical_systems.keys())
             for anatomical_system in list_anatomical_systems:
                 generate_histogram_plot(
-                    model1_scores=experiments_dicts['TotalSeg'][plot_dist],
-                    model2_scores=experiments_dicts['OMASeg'][plot_dist],
+                    model1_scores=aligned_totalseg,
+                    model2_scores=aligned_omaseg,
                     model1_name='TotalSeg',
                     model2_name='OMASeg',
+                    stat_results=stat_results,
                     output_path=plot_output_path,
                     metric_name=metric.capitalize().replace('_', ' '),
                     system_group=anatomical_system,
