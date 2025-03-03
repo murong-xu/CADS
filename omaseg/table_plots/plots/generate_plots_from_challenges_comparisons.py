@@ -146,25 +146,34 @@ def collect_scores(dataset, analysis_name, prefix):
 
 
 if __name__ == "__main__":
-    # analysis_name = 'scores_final'
-    analysis_name = 'filtered_unreliable_and_limited_fov'
-    # analysis_name = 'filtered_unreliable'
-    # analysis_name = 'original_GT_but_remove_limited_fov'
-    prefix = 'dice'  # TODO:
+    result_types = [
+        'filtered_unreliable_and_limited_fov',
+        'filtered_unreliable',
+        'original_GT_but_remove_limited_fov',
+        'scores_final', 
+        ]
+    metrics = [
+        'dice',
+        'hd',
+        'hd95',
+        'normalized_distance'
+    ]
 
-    plot_metric_name = 'Dice'  # TODO:
-    plot_output_path = "/mnt/hdda/murong/22k/plots/per-challenge/per-challenge_boxplot_compare_dice"  # TODO:
+    for result_type in result_types:
+        for metric in metrics:
+            plot_output_path = f"/mnt/hdda/murong/22k/plots/{result_type}/per_challenge/boxplot_compare_{metric}"
+            for dataset in datasets_eval:
+                # Step 1) collect scores
+                aligned_omaseg, aligned_totalseg, stat_results = collect_scores(dataset, result_type, metric)
 
-    for dataset in datasets_eval:
-        aligned_omaseg, aligned_totalseg, stat_results = collect_scores(dataset, analysis_name, prefix)
-
-        generate_boxplot_comparison(
-            model1_scores=aligned_totalseg,
-            model2_scores=aligned_omaseg,
-            model1_name='TotalSeg',
-            model2_name='OMASeg',
-            stat_results=stat_results,
-            output_path=plot_output_path,
-            metric_name=plot_metric_name,
-            datasetname=dataset
-        )
+                # Step 2) generate plot
+                generate_boxplot_comparison(
+                    model1_scores=aligned_totalseg,
+                    model2_scores=aligned_omaseg,
+                    model1_name='TotalSeg',
+                    model2_name='OMASeg',
+                    stat_results=stat_results,
+                    output_path=plot_output_path,
+                    metric_name=metric.capitalize().replace('_', ' '),
+                    datasetname=dataset
+                )

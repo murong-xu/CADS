@@ -49,7 +49,7 @@ def generate_histogram_plot(model1_scores, model2_scores, model1_name, model2_na
     width = 0.35
     
     rects1 = plt.bar(x - width/2, model1_means, width, yerr=model1_stds,
-                    label=model1_name, color=MODEL1_COLOR, alpha=0.5, capsize=5)
+                    label=model1_name, color=MODEL1_COLOR, alpha=0.3, capsize=5)
     rects2 = plt.bar(x + width/2, model2_means, width, yerr=model2_stds,
                     label=model2_name, color=MODEL2_COLOR, alpha=0.5, capsize=5)
     
@@ -131,15 +131,22 @@ def generate_boxplot_comparison(model1_scores, model2_scores, model1_name, model
     ax = sns.boxplot(data=df, y=metric_name, x='Organ', hue='Model',
                     palette=color_dict,
                     width=box_width,
-                    showfliers=False)
+                    showfliers=False, 
+                    boxprops=dict(alpha=0.6), 
+                    medianprops=dict(color="black"), 
+                    whiskerprops=dict(alpha=0.6), 
+                    capprops=dict(alpha=0.6),)
     sns.stripplot(data=df, y=metric_name, x='Organ', hue='Model',
                  palette=color_dict,
-                 size=3, alpha=0.3, jitter=0.1, dodge=True)
+                 size=3, alpha=0.4, jitter=0.1, dodge=True)
     
     # decide the ylim
     whisker_mins = []
     whisker_maxs = []
+    whisker_dict = {}
     for (organ, model), group in df.groupby(['Organ', 'Model']):
+        if organ not in whisker_dict:
+            whisker_dict[organ] = {}
         q1 = group[metric_name].quantile(0.25)
         q3 = group[metric_name].quantile(0.75)
         iqr = q3 - q1
@@ -148,6 +155,7 @@ def generate_boxplot_comparison(model1_scores, model2_scores, model1_name, model
         upper_whisker = group[metric_name][group[metric_name] <= q3 + 1.5 * iqr].max()
         whisker_mins.append(lower_whisker)
         whisker_maxs.append(upper_whisker)
+        whisker_dict[organ][model] = upper_whisker
     
     y_min = min(whisker_mins) if whisker_mins else df[metric_name].min()
     y_max = max(whisker_maxs) if whisker_maxs else df[metric_name].max()
@@ -160,14 +168,11 @@ def generate_boxplot_comparison(model1_scores, model2_scores, model1_name, model
         if organ in stat_results:
             result = stat_results[organ]
             if result.get('p') is not None and isinstance(result['p'], (int, float)):
-                organ_data = df[df['Organ'] == organ]
-                y1 = organ_data[organ_data['Model'] == model1_name][metric_name].max()
-                y2 = organ_data[organ_data['Model'] == model2_name][metric_name].max()
                 x = i
-                
-                max_y = max(y1, y2)
-                y_max = organ_data[metric_name].max()
-                y_min = organ_data[metric_name].min()
+                current_whisker_max = max(
+                    whisker_dict[organ][model1_name],
+                    whisker_dict[organ][model2_name]
+                )
                 fig = plt.gcf()
                 fig_width, fig_height = fig.get_size_inches()
                 bracket_width = box_width/2
@@ -177,19 +182,19 @@ def generate_boxplot_comparison(model1_scores, model2_scores, model1_name, model
                 
                 p_text = '**'
                 if result['Better Model'] == 'TotalSeg':
-                    significance_color = '#ED0DD9'
+                    significance_color = MODEL1_COLOR
                 else:
-                    significance_color = '#15B01A'
+                    significance_color = MODEL2_COLOR
                 plt.plot([x - bracket_width, x - bracket_width], 
-                        [max_y, max_y + bracket_height], 
+                        [current_whisker_max, current_whisker_max + bracket_height], 
                         color=bracket_color, lw=line_width, alpha=0.7)
                 plt.plot([x + bracket_width, x + bracket_width], 
-                        [max_y, max_y + bracket_height], 
+                        [current_whisker_max, current_whisker_max + bracket_height], 
                         color=bracket_color, lw=line_width, alpha=0.7)
                 plt.plot([x - bracket_width, x + bracket_width], 
-                        [max_y + bracket_height, max_y + bracket_height], 
+                        [current_whisker_max + bracket_height, current_whisker_max + bracket_height], 
                         color=bracket_color, lw=line_width, alpha=0.7)
-                plt.text(x, max_y + bracket_height * 1.05, p_text,
+                plt.text(x, current_whisker_max + bracket_height * 1.05, p_text,
                         ha='center', va='bottom', 
                         fontsize=12, 
                         weight='bold', 
