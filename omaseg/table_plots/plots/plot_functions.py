@@ -6,8 +6,15 @@ import seaborn as sns
 
 from omaseg.table_plots.plots.utils import anatomical_system_colors
 
-MODEL1_COLOR = "#0072BD"
-MODEL2_COLOR = "#FF0000"
+# dark blue / orange
+# MODEL1_COLOR = "#115d76" 
+# MODEL2_COLOR = "#ffa505"
+# purple / orange
+MODEL1_COLOR = "#871282"
+MODEL2_COLOR = "#ffa505"
+# purple / green
+# MODEL1_COLOR = "#765898"
+# MODEL2_COLOR = "#52d053"
 
 def generate_histogram_plot(model1_scores, model2_scores, model1_name, model2_name, 
                           stat_results, output_path, metric_name, system_group, anatomical_systems):
