@@ -183,9 +183,25 @@ def generate_boxplot_comparison(model1_scores, model2_scores, model1_name, model
                     medianprops=dict(color="black"), 
                     whiskerprops=dict(alpha=0.6), 
                     capprops=dict(alpha=0.6),)
-    sns.stripplot(data=df, y=metric_name, x='Organ', hue='Model',
-                 palette=color_dict,
-                 size=3, alpha=0.4, jitter=0.1, dodge=True)
+    num_models = len(df['Model'].unique())
+    offset = box_width / num_models
+    jitter_width = 0.02
+    for i, model in enumerate(df['Model'].unique()):
+        model_data = df[df['Model'] == model].copy()
+        if i == 0:
+            shift = -offset/2
+        else:
+            shift = offset/2
+        base_positions = pd.Categorical(model_data['Organ']).codes
+        jitter = np.random.uniform(-jitter_width, jitter_width, size=len(model_data))
+        model_data['x_position'] = base_positions + shift + jitter
+        sns.scatterplot(data=model_data, 
+                       y=metric_name, 
+                       x='x_position',
+                       color=color_dict[model],
+                       s=30,
+                       alpha=0.4,
+                       legend=False)
     
     # decide the ylim
     whisker_mins = []
