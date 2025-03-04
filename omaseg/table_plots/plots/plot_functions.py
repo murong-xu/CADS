@@ -253,24 +253,53 @@ def generate_boxplot_comparison(model1_scores, model2_scores, model1_name, model
         plt.close()
 
 def generate_box_plot(results_dict, metric_name='DSC', output_path=None, title="Structure-wise Performance Distribution",
-                     anatomical_systems=None):
+                     anatomical_systems=None, is_normalized=True):
     """
     Generate a box plot grouped by anatomical systems.
     Args:
         results_dict: Dictionary of structure-wise scores
         anatomical_systems: Dictionary of anatomical system groupings
+        is_normalized: whether the input metric is normalized in range [0, 1]
     """
     data_list = []
+    stats_dict = {}  # store original scores
+    for organ, scores in results_dict.items():
+        scores_array = np.array(scores)
+        stats_dict[organ] = {
+            'median': np.median(scores_array),
+            'mean': np.mean(scores_array),
+            'std': np.std(scores_array)
+        }
+
+    if not is_normalized:
+        # better display of distance metrics
+        def log_transform(x, min_val=0.1):
+            if np.isscalar(x):
+                if x == 0:
+                    return 0
+                elif x < 0:
+                    return np.log10(min_val) 
+                return np.log10(x + min_val)
+            return np.array([log_transform(val, min_val) for val in x])
+        
+        transformed_dict = {}
+        for organ, scores in results_dict.items():
+            transformed_dict[organ] = [log_transform(score) for score in scores]
+        plot_dict = transformed_dict
+    else:
+        plot_dict = results_dict
     
     # In each anatomical system: sort by median
-    structure_medians = {organ: np.median(scores) for organ, scores in results_dict.items()}
+    structure_medians = {organ: stats_dict[organ]['median'] for organ, scores in results_dict.items()}
+    reverse_sort = is_normalized  # normalized metrics (high->low), distance metrics (low->high)
+
     for system, structures in anatomical_systems.items():
-        valid_structures = [s for s in structures if s in results_dict]
+        valid_structures = [s for s in structures if s in plot_dict]
         sorted_structures = sorted(valid_structures, 
                                  key=lambda x: structure_medians[x],
-                                 reverse=True)
+                                 reverse=reverse_sort)
         for organ in sorted_structures:
-            scores = results_dict[organ]
+            scores = plot_dict[organ]
             n_samples = len(scores)
             for score in scores:
                 data_list.append({
@@ -281,6 +310,23 @@ def generate_box_plot(results_dict, metric_name='DSC', output_path=None, title="
             
     df = pd.DataFrame(data_list)
     plt.figure(figsize=(12, len(results_dict) * 0.3))
+
+    # determine xlim
+    whisker_mins = []
+    whisker_maxs = []
+    for organ, group in df.groupby('Organ'):
+        q1 = group[metric_name].quantile(0.25)
+        q3 = group[metric_name].quantile(0.75)
+        iqr = q3 - q1
+        
+        lower_whisker = group[metric_name][group[metric_name] >= q1 - 1.5 * iqr].min()
+        upper_whisker = group[metric_name][group[metric_name] <= q3 + 1.5 * iqr].max()
+        whisker_mins.append(lower_whisker)
+        whisker_maxs.append(upper_whisker)
+    
+    x_min = min(whisker_mins) if whisker_mins else df[metric_name].min()
+    x_max = max(whisker_maxs) if whisker_maxs else df[metric_name].max()
+    x_range = x_max - x_min
     
     ax = sns.boxplot(data=df, 
                     y='Organ', 
@@ -288,12 +334,12 @@ def generate_box_plot(results_dict, metric_name='DSC', output_path=None, title="
                     hue='System',
                     palette=anatomical_system_colors,
                     whis=1.5,
-                    showfliers=True,
-                    flierprops={'marker': 'o',
-                               'markerfacecolor': 'black',
-                               'markeredgecolor': 'black',
-                               'markersize': 2,
-                               'alpha': 0.3})
+                    boxprops=dict(alpha=0.6), 
+                    medianprops=dict(color="black"), 
+                    whiskerprops=dict(alpha=0.6), 
+                    capprops=dict(alpha=0.6),
+                    showfliers=False,
+                    )
     
     # add scatters (original data)
     sns.stripplot(data=df,
@@ -303,40 +349,122 @@ def generate_box_plot(results_dict, metric_name='DSC', output_path=None, title="
                  size=2,
                  alpha=0.3,
                  jitter=0.2)
+
+    # calculate ststistics (median, mean shown in the columns)
+    ordered_organs = df['Organ'].unique() 
+    stats_data = []
+    for organ in ordered_organs:
+        organ_name = organ.split(" (n=")[0]
+        stats_data.append({
+            'Organ': organ,
+            'median': stats_dict[organ_name]['median'],
+            'mean': stats_dict[organ_name]['mean'],
+            'std': stats_dict[organ_name]['std']
+        })
+    stats = pd.DataFrame(stats_data).set_index('Organ')
     
-    # calculate ststistics (median, mean)
-    ordered_organs = df['Organ'].unique()
-    stats = df.groupby('Organ').agg({
-        metric_name: ['median', 'mean', 'std']
-    })[metric_name].reindex(ordered_organs)
-    
-    right_edge = ax.get_xlim()[1]
-    ax.text(right_edge, -0.8,
+    right_edge = x_max    
+    format_str = '{:.3f}'
+    if is_normalized:
+        # normalized metrics (0-1)
+        text_spacing = 0.12
+        final_margin = 0.15
+        text_begin = 0.1
+
+        x_min = 0
+        x_max = min(1.1, x_max + 0.05 * x_range)
+        x_ticks = np.arange(0, 1.2, 0.2)
+        ax.set_xticks(x_ticks)
+
+        ax.text(right_edge + text_begin, -0.8,
             'median',
-            va='center', ha='left', fontsize=10,
+            va='center', ha='center', fontsize=10,
             fontweight='bold', color='black')
-    ax.text(right_edge + 0.12, -0.8,
-            'mean±std',
-            va='center', ha='left', fontsize=10,
+        ax.text(right_edge + text_begin + text_spacing, -0.8,
+                'mean±std',
+                va='center', ha='center', fontsize=10,
+                fontweight='bold', color='black')
+        
+        for i, (organ, _) in enumerate(stats.iterrows()):
+            organ_name = organ.split(" (n=")[0]
+            stats_data = stats_dict[organ_name]
+            
+            if np.isnan(stats_data['mean']) or np.isnan(stats_data['std']):
+                median_str = "N/A"
+                mean_std_str = "N/A"
+            else:
+                median_str = format_str.format(stats_data['median'])
+                mean_std_str = f'{format_str.format(stats_data["mean"])}±{format_str.format(stats_data["std"])}'
+            
+            ax.text(right_edge + text_begin, i,
+                    median_str,
+                    va='center', ha='center',
+                    fontsize=8, color='black', alpha=0.7)
+            ax.text(right_edge + text_begin + text_spacing, i,
+                    mean_std_str,
+                    va='center', ha='center',
+                    fontsize=8, color='black', alpha=0.7)
+    else:
+        # distance metrics
+        text_spacing = 0.12 * x_range
+        final_margin = 0.15 * x_range
+        text_begin = 0.01 * x_range
+
+        def inverse_log_transform(x, min_val=0.1):
+            if np.isscalar(x):
+                if x == 0:
+                    return 0
+                elif x == np.log10(min_val):
+                    return 0
+                return 10**x - min_val
+            return np.array([inverse_log_transform(val, min_val) for val in x])
+        
+        target_values = [0, 1.5, 5, 10, 20, 50, 100]
+        ticks = []
+        labels = []
+        
+        for val in target_values:
+            tick = log_transform(val)
+            if tick <= x_max:
+                ticks.append(tick)
+                if val < 1:
+                    labels.append("0")
+                elif val == 1.5:
+                    labels.append("1.5")
+                else:
+                    labels.append(f"{int(val)}")
+        
+        ax.set_xticks(ticks)
+        ax.set_xticklabels(labels)
+
+        ax.text(right_edge + text_begin, -0.8,
+            'median',
+            va='center', ha='center', fontsize=10,
             fontweight='bold', color='black')
-    
-    for i, (organ, row) in enumerate(stats.iterrows()):
-        median_str = f'{row["median"]:.3f}'
-        ax.text(right_edge, i,
-                median_str,
-                va='center',
-                ha='left',
-                fontsize=8,
-                color='black',
-                alpha=0.7)
-        mean_std_str = f'{row["mean"]:.3f}±{row["std"]:.3f}'
-        ax.text(right_edge + 0.12, i,
-                mean_std_str,
-                va='center',
-                ha='left',
-                fontsize=8,
-                color='black',
-                alpha=0.7)
+        ax.text(right_edge + text_begin + text_spacing, -0.8,
+                'mean±std',
+                va='center', ha='center', fontsize=10,
+                fontweight='bold', color='black')
+        
+        for i, (organ, _) in enumerate(stats.iterrows()):
+            organ_name = organ.split(" (n=")[0]
+            stats_data = stats_dict[organ_name]
+            
+            if np.isnan(stats_data['mean']) or np.isnan(stats_data['std']):
+                median_str = "N/A"
+                mean_std_str = "N/A"
+            else:
+                median_str = format_str.format(stats_data['median'])
+                mean_std_str = f'{format_str.format(stats_data["mean"])}±{format_str.format(stats_data["std"])}'
+            
+            ax.text(right_edge + text_begin, i,
+                    median_str,
+                    va='center', ha='center',
+                    fontsize=8, color='black', alpha=0.7)
+            ax.text(right_edge + text_begin + text_spacing, i,
+                    mean_std_str,
+                    va='center', ha='center',
+                    fontsize=8, color='black', alpha=0.7)
         
     prev_system = None
     y_coords = []
@@ -351,15 +479,14 @@ def generate_box_plot(results_dict, metric_name='DSC', output_path=None, title="
     plt.title(title, pad=20, fontsize=14, fontweight='bold')
     ax.grid(True, axis='x', linestyle='--', alpha=0.7)
     
-    ax.set_xlim(0, right_edge + 0.3)  
-    ax.set_xticks(np.arange(0, 1.2, 0.2))
-    
     plt.legend(title='Anatomical Systems', 
               bbox_to_anchor=(1.05, 1),
               loc='upper left',
               fontsize=10,
               title_fontsize=12)
     
+    ax.set_xlim(x_min, right_edge + text_begin + text_spacing + final_margin)
+
     if output_path:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
@@ -367,25 +494,54 @@ def generate_box_plot(results_dict, metric_name='DSC', output_path=None, title="
     return ax
 
 
-def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_dict, metric_name='DSC', output_path=None,
-                                            title="Structure-wise Performance Distribution", anatomical_systems=None):
+def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_dict, metric_name='DSC', output_path=None, final_margin=0.15,
+                                            title="Structure-wise Performance Distribution", anatomical_systems=None, is_normalized=True):
     """
     Generate a box plot with dataset source indicators.
     Args:
         results_dict: Dictionary of structure-wise scores
         test_datasets_sources_dict: Dictionary mapping each structure to its test datasets
+        is_normalized: whether the input metric is normalized in range [0, 1]
     """    
     data_list = []
+    stats_dict = {}  # store original scores
+    for organ, scores in results_dict.items():
+        scores_array = np.array(scores)
+        stats_dict[organ] = {
+            'median': np.median(scores_array),
+            'mean': np.mean(scores_array),
+            'std': np.std(scores_array)
+        }
+
+    if not is_normalized:
+        # better display of distance metrics
+        def log_transform(x, min_val=0.1):
+            if np.isscalar(x):
+                if x == 0:
+                    return 0
+                elif x < 0:
+                    return np.log10(min_val) 
+                return np.log10(x + min_val)
+            return np.array([log_transform(val, min_val) for val in x])
+        
+        transformed_dict = {}
+        for organ, scores in results_dict.items():
+            transformed_dict[organ] = [log_transform(score) for score in scores]
+        plot_dict = transformed_dict
+    else:
+        plot_dict = results_dict    
     
     # in each anatomical system: sort by median
-    structure_medians = {organ: np.median(scores) for organ, scores in results_dict.items()}
+    structure_medians = {organ: stats_dict[organ]['median'] for organ, scores in results_dict.items()}
+    reverse_sort = is_normalized  # normalized metrics (high->low), distance metrics (low->high)
+
     for system, structures in anatomical_systems.items():
-        valid_structures = [s for s in structures if s in results_dict]
+        valid_structures = [s for s in structures if s in plot_dict]
         sorted_structures = sorted(valid_structures, 
                                  key=lambda x: structure_medians[x],
-                                 reverse=True)
+                                 reverse=reverse_sort)
         for organ in sorted_structures:
-            scores = results_dict[organ]
+            scores = plot_dict[organ]
             n_samples = len(scores)
             for score in scores:
                 data_list.append({
@@ -397,6 +553,24 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
     df = pd.DataFrame(data_list)
     
     fig = plt.figure(figsize=(20, len(results_dict) * 0.3))
+
+    # determine xlim
+    whisker_mins = []
+    whisker_maxs = []
+    for organ, group in df.groupby('Organ'):
+        q1 = group[metric_name].quantile(0.25)
+        q3 = group[metric_name].quantile(0.75)
+        iqr = q3 - q1
+        
+        lower_whisker = group[metric_name][group[metric_name] >= q1 - 1.5 * iqr].min()
+        upper_whisker = group[metric_name][group[metric_name] <= q3 + 1.5 * iqr].max()
+        whisker_mins.append(lower_whisker)
+        whisker_maxs.append(upper_whisker)
+    
+    x_min = min(whisker_mins) if whisker_mins else df[metric_name].min()
+    x_max = max(whisker_maxs) if whisker_maxs else df[metric_name].max()
+    x_range = x_max - x_min
+
     # 3 major parts: 1) box-plot+stat, 2) dataset indicator, 3) legend
     gs = fig.add_gridspec(1, 3, width_ratios=[4, 1, 0.3], wspace=0.1)
     
@@ -410,13 +584,11 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
                 x=metric_name,
                 hue='System',
                 palette=anatomical_system_colors,
-                whis=1.5,
-                showfliers=True,
-                flierprops={'marker': 'o',
-                           'markerfacecolor': 'black',
-                           'markeredgecolor': 'black',
-                           'markersize': 2,
-                           'alpha': 0.3},
+                boxprops=dict(alpha=0.6), 
+                medianprops=dict(color="black"), 
+                whiskerprops=dict(alpha=0.6), 
+                capprops=dict(alpha=0.6),
+                showfliers=False,
                 ax=ax_main)
     sns.stripplot(data=df,
                  y='Organ',
@@ -435,43 +607,126 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
                     fontsize=10,
                     title_fontsize=12)
     
-    # calc stat.
-    ordered_organs = df['Organ'].unique()
-    stats = df.groupby('Organ').agg({
-        metric_name: ['median', 'mean', 'std']
-    })[metric_name].reindex(ordered_organs)
+    # calculate ststistics (median, mean shown in the columns)
+    ordered_organs = df['Organ'].unique() 
+    stats_data = []
+    for organ in ordered_organs:
+        organ_name = organ.split(" (n=")[0]
+        stats_data.append({
+            'Organ': organ,
+            'median': stats_dict[organ_name]['median'],
+            'mean': stats_dict[organ_name]['mean'],
+            'std': stats_dict[organ_name]['std']
+        })
+    stats = pd.DataFrame(stats_data).set_index('Organ')
     
     ax_main.set_yticks(range(len(ordered_organs)))
     ax_main.set_yticklabels(ordered_organs, fontsize=10, ha='right')
     ax_main.tick_params(axis='y', pad=5)
     
-    right_edge = ax_main.get_xlim()[1]
-    ax_main.text(right_edge, -0.8,
-                'median',
-                va='bottom', ha='left', fontsize=10,
-                fontweight='bold', color='black')
-    ax_main.text(right_edge + 0.12, -0.8,
+    right_edge = x_max
+    format_str = '{:.3f}'
+
+    if is_normalized:
+        # normalized metrics (0-1)
+        text_spacing = 0.12
+        final_margin = 0.15
+        text_begin = 0.1
+
+        x_min = 0
+        x_max = min(1.1, x_max + 0.05 * x_range)
+        x_ticks = np.arange(0, 1.2, 0.2)
+        ax_main.set_xticks(x_ticks)
+
+        ax_main.text(right_edge + text_begin, -0.8,
+            'median',
+            va='center', ha='center', fontsize=10,
+            fontweight='bold', color='black')
+        ax_main.text(right_edge + text_begin + text_spacing, -0.8,
                 'mean±std',
-                va='bottom', ha='left', fontsize=10,
+                va='center', ha='center', fontsize=10,
                 fontweight='bold', color='black')
-    
-    for i, (organ, row) in enumerate(stats.iterrows()):
-        median_str = f'{row["median"]:.3f}'
-        ax_main.text(right_edge, i,
+        
+        for i, (organ, _) in enumerate(stats.iterrows()):
+            organ_name = organ.split(" (n=")[0]
+            stats_data = stats_dict[organ_name]
+            
+            if np.isnan(stats_data['mean']) or np.isnan(stats_data['std']):
+                median_str = "N/A"
+                mean_std_str = "N/A"
+            else:
+                median_str = format_str.format(stats_data['median'])
+                mean_std_str = f'{format_str.format(stats_data["mean"])}±{format_str.format(stats_data["std"])}'
+            
+            ax_main.text(right_edge + text_begin, i,
                     median_str,
-                    va='center',
-                    ha='left',
-                    fontsize=8,
-                    color='black',
-                    alpha=0.7)
-        mean_std_str = f'{row["mean"]:.3f}±{row["std"]:.3f}'
-        ax_main.text(right_edge + 0.12, i,
+                    va='center', ha='center',
+                    fontsize=8, color='black', alpha=0.7)
+            ax_main.text(right_edge + text_begin + text_spacing, i,
                     mean_std_str,
-                    va='center',
-                    ha='left',
-                    fontsize=8,
-                    color='black',
-                    alpha=0.7)
+                    va='center', ha='center',
+                    fontsize=8, color='black', alpha=0.7)
+    else:
+        # distance metrics
+        text_begin = 0.01 * x_range
+        text_spacing = 0.12 * x_range
+        final_margin = 0.15 * x_range
+
+        def inverse_log_transform(x, min_val=0.1):
+            if np.isscalar(x):
+                if x == 0:
+                    return 0
+                elif x == np.log10(min_val):
+                    return 0
+                return 10**x - min_val
+            return np.array([inverse_log_transform(val, min_val) for val in x])
+        
+        target_values = [0, 1.5, 5, 10, 20, 50, 100]
+        ticks = []
+        labels = []
+        
+        for val in target_values:
+            tick = log_transform(val)
+            if tick <= x_max:
+                ticks.append(tick)
+                if val < 1:
+                    labels.append("0")
+                elif val == 1.5:
+                    labels.append("1.5")
+                else:
+                    labels.append(f"{int(val)}")
+        
+        ax_main.set_xticks(ticks)
+        ax_main.set_xticklabels(labels)
+
+        ax_main.text(right_edge + text_begin, -0.8,
+            'median',
+            va='center', ha='center', fontsize=10,
+            fontweight='bold', color='black')
+        ax_main.text(right_edge + text_begin + text_spacing, -0.8,
+                'mean±std',
+                va='center', ha='center', fontsize=10,
+                fontweight='bold', color='black')
+        
+        for i, (organ, _) in enumerate(stats.iterrows()):
+            organ_name = organ.split(" (n=")[0]
+            stats_data = stats_dict[organ_name]
+            
+            if np.isnan(stats_data['mean']) or np.isnan(stats_data['std']):
+                median_str = "N/A"
+                mean_std_str = "N/A"
+            else:
+                median_str = format_str.format(stats_data['median'])
+                mean_std_str = f'{format_str.format(stats_data["mean"])}±{format_str.format(stats_data["std"])}'
+            
+            ax_main.text(right_edge + text_begin, i,
+                    median_str,
+                    va='center', ha='center',
+                    fontsize=8, color='black', alpha=0.7)
+            ax_main.text(right_edge + text_begin + text_spacing, i,
+                    mean_std_str,
+                    va='center', ha='center',
+                    fontsize=8, color='black', alpha=0.7)
     
     prev_system = None
     for i, (idx, row) in enumerate(df.groupby('Organ').first().iterrows()):
@@ -483,8 +738,7 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
     ax_main.set_xlabel(metric_name, fontsize=12)
     ax_main.set_title(title, pad=20, fontsize=14, fontweight='bold')
     ax_main.grid(True, axis='x', linestyle='--', alpha=0.7)
-    ax_main.set_xlim(0, right_edge + 0.3)
-    ax_main.set_xticks(np.arange(0, 1.2, 0.2))
+    ax_main.set_xlim(x_min, right_edge + text_begin + text_spacing + final_margin)
     
     all_datasets = sorted(list(set(
         dataset for datasets in test_datasets_sources_dict.values() 

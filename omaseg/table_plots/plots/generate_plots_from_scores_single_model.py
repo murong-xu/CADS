@@ -129,33 +129,45 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
 
 
 if __name__ == "__main__":
-    # Step 1) collect scores
+    result_types = [
+    'filtered_unreliable_and_limited_fov',
+    'filtered_unreliable',
+    'original_GT_but_remove_limited_fov',
+    'scores_final', 
+    ]
+    metrics = {
+        'dice': {'is_normalized': True},
+        'hd': {'is_normalized': False},
+        'hd95': {'is_normalized': False},
+        'normalized_distance': {'is_normalized': True},
+    }
+
     grouping_in_out_dist = 'group_by_omaseg_inout'  # 'group_by_omaseg_inout'/'group_by_totalseg_dataset'
-    # analysis_name = 'scores_final'
-    analysis_name = 'filtered_unreliable_and_limited_fov'
-    # analysis_name = 'filtered_unreliable'
-    # analysis_name = 'original_GT_but_remove_limited_fov'
-    prefix = 'dice'  # TODO:
+    plot_dist = 'all'
 
-    experiments_dicts, test_datasets_sources_dict = collect_scores(analysis_name, grouping_in_out_dist, prefix)
+    for result_type in result_types:
+        for metric in list(metrics.keys()):
+            # Step 1) collect sc777ores
+            experiments_dicts, test_datasets_sources_dict = collect_scores(result_type, grouping_in_out_dist, metric)
 
-    # Step 2) generate plot
-    plot_dist = 'all'  # TODO:
-    plot_metric_name = 'Dice'  # TODO:
-    plot_output_path='/mnt/hdda/murong/22k/plots/per-structure/box_plot_all_dice.png'  # TODO:
-    plot_title='Structure-wise Dice Score Distribution' 
-    generate_box_plot(experiments_dicts['OMASeg'][plot_dist], 
-                      metric_name=plot_metric_name, 
-                      output_path=plot_output_path,
-                      title=plot_title,
-                      anatomical_systems=anatomical_systems)
-    # plot_dist = 'all'  # TODO:
-    # plot_metric_name = 'Dice'  # TODO:
-    # plot_output_path='/mnt/hdda/murong/22k/plots/per-structure/box_plot_with_testdata_sources_all_dice.png'  # TODO:
-    # plot_title='Structure-wise Dice Score Distribution' # TODO:
-    # generate_box_plot_with_testdata_sources(experiments_dicts['OMASeg'][plot_dist],
-    #                                         test_datasets_sources_dict['OMASeg'][plot_dist],
-    #                                         metric_name=plot_metric_name,
-    #                                         output_path=plot_output_path,
-    #                                         title=plot_title,
-    #                                         anatomical_systems=anatomical_systems)
+            # Step 2) generate plot
+            metric_name = metric.capitalize().replace('_', ' ')
+
+            plot_output_path=f'/mnt/hdda/murong/22k/plots/{result_type}/per_structure/omaseg-only/omaseg-only_box_plot_{metric}.png'
+            generate_box_plot(experiments_dicts['OMASeg'][plot_dist], 
+                            metric_name=metric_name, 
+                            output_path=plot_output_path,
+                            title=f'Structure-wise {metric_name} Score Distribution',
+                            anatomical_systems=anatomical_systems,
+                            is_normalized=metrics[metric]['is_normalized']
+                            )
+            
+            plot_output_path=f'/mnt/hdda/murong/22k/plots/{result_type}/per_structure/omaseg-only/omaseg-only_box_plot_{metric}_with_test_sources.png'
+            generate_box_plot_with_testdata_sources(experiments_dicts['OMASeg'][plot_dist],
+                                                    test_datasets_sources_dict['OMASeg'][plot_dist],
+                                                    metric_name=metric_name,
+                                                    output_path=plot_output_path,
+                                                    title=f'Structure-wise {metric_name} Score Distribution',
+                                                    anatomical_systems=anatomical_systems,
+                                                    is_normalized=metrics[metric]['is_normalized']
+                                                    )
