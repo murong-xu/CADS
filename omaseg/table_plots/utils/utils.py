@@ -39,7 +39,7 @@ def align_and_filter_scores(scores_1, scores_2):
 def list_specific_files(directory, prefix='dice', suffix='.xlsx'):
     specific_files = []
     for dirpath, dirnames, filenames in os.walk(directory):
-        for filename in [f for f in filenames if f.startswith(prefix) and f.endswith(suffix)]:
+        for filename in [f for f in filenames if f.startswith(prefix+'_') and f.endswith(suffix)]:
             specific_files.append(os.path.join(dirpath, filename))
     specific_files.sort()
     return specific_files
