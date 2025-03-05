@@ -2,12 +2,11 @@ import pandas as pd
 from omaseg.dataset_utils.bodyparts_labelmaps import anatomical_systems
 
 
-def generate_metric_cell(row, model_name, show_percentage):
+def generate_metric_cell(row, model_name, show_percentage, better_model=None):
     def format_number(value, as_percentage=False):
         if pd.isna(value) or value == '' or value == 'nan':
             return '-'
         
-        # 处理均值±标准差格式
         if isinstance(value, str) and '±' in value:
             try:
                 mean_str, std_str = value.split('±')
@@ -18,8 +17,6 @@ def generate_metric_cell(row, model_name, show_percentage):
                 return f"{mean:.2f}±{std:.2f}"
             except (ValueError, TypeError):
                 return value
-        
-        # 处理普通数值
         try:
             num = float(value)
             if as_percentage:
@@ -54,21 +51,40 @@ def generate_metric_cell(row, model_name, show_percentage):
     if show_percentage and median != '-':
         median = f"{median}"
 
-    return f"{mean} \\\\ {median} \\\\ {ci_formatted}"
+    if better_model == model_name:
+        return (
+            f"\\begin{{tabular}}[c]{{@{{}}c@{{}}}}"
+            f"\\begin{{minipage}}[c][4em]{{2.3cm}}\\raggedleft"
+            f"\\hfill\\raisebox{{-1ex}}{{\\textcolor{{MyGreen}}{{\\textbf{{\\normalsize *}}}}}}\\\\[-2ex]"
+            f"\\centering {mean} \\\\ {median} \\\\ {ci_formatted} \\vspace{{0.2ex}}"
+            f"\\end{{minipage}}"
+            f"\\end{{tabular}}"
+        )
+    else:
+        return (
+            f"\\begin{{tabular}}[c]{{@{{}}c@{{}}}}"
+            f"\\begin{{minipage}}[c][4em]{{2.3cm}}\\centering"
+            f"{mean} \\\\ {median} \\\\ {ci_formatted} \\vspace{{0.2ex}}"
+            f"\\end{{minipage}}"
+            f"\\end{{tabular}}"
+        )
 
 
 def generate_organ_row(organ, metric_1_row, metric_2_row, metric_data_1_dict, metric_data_2_dict):
     show_percentage_1 = metric_data_1_dict.get('shown_in_percentage', False)
     show_percentage_2 = metric_data_2_dict.get('shown_in_percentage', False)
 
+    better_model_1 = metric_1_row.get('all Better Model', None)
+    better_model_2 = metric_2_row.get('all Better Model', None)
+
     metric_1_omaseg_cell = generate_metric_cell(
-        metric_1_row, 'OMASeg', show_percentage_1)
+        metric_1_row, 'OMASeg', show_percentage_1, better_model_1)
     metric_1_totalseg_cell = generate_metric_cell(
-        metric_1_row, 'TotalSeg', show_percentage_1)
+        metric_1_row, 'TotalSeg', show_percentage_1, better_model_1)
     metric_2_omaseg_cell = generate_metric_cell(
-        metric_2_row, 'OMASeg', show_percentage_2)
+        metric_2_row, 'OMASeg', show_percentage_2, better_model_2)
     metric_2_totalseg_cell = generate_metric_cell(
-        metric_2_row, 'TotalSeg', show_percentage_2)
+        metric_2_row, 'TotalSeg', show_percentage_2, better_model_2)
 
     return (
         f"\\begin{{tabular}}[m]{{@{{}}c@{{}}}} \\parbox[c]{{1.8cm}}{{\\centering {organ}}} \\end{{tabular}} & "
@@ -91,8 +107,9 @@ def generate_latex_table(metric_data_1_dict, metric_data_2_dict, output_path, sy
 
     # LaTeX header
     latex_code = [
+        "\definecolor{MyGreen}{rgb}{0.133, 0.545, 0.133}",
         "{\\small",
-        "\\begin{longtable}{|>{\centering\\arraybackslash}m{2.1cm}|>{\centering\\arraybackslash}m{2.5cm}|>{\centering\\arraybackslash}m{2.5cm}|>{\centering\\arraybackslash}m{2.5cm}|>{\centering\\arraybackslash}m{2.5cm}|}",
+        "\\begin{longtable}{|c|c|c|c|c|}",
         "\\caption{Comparison of OMASeg and TotalSeg performance}",
         "\label{tab:model_comparison} \\\\",
         "\\hline",
