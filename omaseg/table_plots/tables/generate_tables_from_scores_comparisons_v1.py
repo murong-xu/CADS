@@ -44,7 +44,7 @@ def generate_metric_cell(row, model_name, show_percentage, better_model=None):
 
     # if results not exist
     if mean == '-' and median == '-' and ci_formatted == '-':
-        return '-'
+        return '--'
 
     if show_percentage and mean != '-':
         mean = f"{mean}"

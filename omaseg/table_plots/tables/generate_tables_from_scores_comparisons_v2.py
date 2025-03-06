@@ -47,16 +47,17 @@ def generate_metric_cell(row, model_name, show_percentage, better_model=None):
         return ['--', '--', '--']
 
     # Format the mean with ± and add star if better
-    if mean != '-':
-        if '±' in mean:
-            mean = f"${mean}$"
-        if better_model == model_name:
-            mean = f"{mean}\\textsuperscript{{\\textcolor{{MyGreen}}{{*}}}}"
+    if show_percentage and mean != '-':
+        mean = f"{mean}"
+    if show_percentage and median != '-':
+        median = f"{median}"
+    if better_model == model_name:
+        mean = f"{mean}\\textsuperscript{{\\textcolor{{MyGreen}}{{*}}}}"
 
     return [mean, median, ci_formatted]
 
 
-def generate_organ_row(organ, metric_1_row, metric_2_row, metric_data_1_dict, metric_data_2_dict):
+def generate_organ_row(organ, metric_1_row, metric_2_row, metric_data_1_dict, metric_data_2_dict, is_odd=True):
     show_percentage_1 = metric_data_1_dict.get('shown_in_percentage', False)
     show_percentage_2 = metric_data_2_dict.get('shown_in_percentage', False)
 
@@ -68,21 +69,32 @@ def generate_organ_row(organ, metric_1_row, metric_2_row, metric_data_1_dict, me
     totalseg_1_values = generate_metric_cell(metric_1_row, 'TotalSeg', show_percentage_1, better_model_1)
     omaseg_2_values = generate_metric_cell(metric_2_row, 'OMASeg', show_percentage_2, better_model_2)
     totalseg_2_values = generate_metric_cell(metric_2_row, 'TotalSeg', show_percentage_2, better_model_2)
-
+    
     # Generate the three rows
+    color = "LightGray" if is_odd else "LightBlue"
+    organ_cell = (
+        f"\\multirow{{3}}{{=}}[6ex]"
+        f"{{\\cellcolor{{{color}}}"
+        f"{{\\begin{{minipage}}[c]{{2.3cm}}"
+        f"\\centering\\textcolor{{black}}{{{organ}}}"
+        f"\\end{{minipage}}}}"
+        f"}}"
+    )
+
     rows = [
         "\\nopagebreak[4]",
-        f"\\multirow{{3}}{{=}}{{{organ}}} & "
-        f"{omaseg_1_values[0]} & {totalseg_1_values[0]} & "
+        f"\\rowcolor{{{color}}}",
+        f"& {omaseg_1_values[0]} & {totalseg_1_values[0]} & "
         f"{omaseg_2_values[0]} & {totalseg_2_values[0]} \\\\",
         "\\nopagebreak[4]",
+        f"\\rowcolor{{{color}}}",
         f"& {omaseg_1_values[1]} & {totalseg_1_values[1]} & "
         f"{omaseg_2_values[1]} & {totalseg_2_values[1]} \\\\",
         "\\nopagebreak[4]",
-        f"& {omaseg_1_values[2]} & {totalseg_1_values[2]} & "
+        f"\\rowcolor{{{color}}}",
+        f"{organ_cell} & {omaseg_1_values[2]} & {totalseg_1_values[2]} & "
         f"{omaseg_2_values[2]} & {totalseg_2_values[2]} \\\\"
     ]
-
     return rows
 
 
@@ -99,6 +111,8 @@ def generate_latex_table(metric_data_1_dict, metric_data_2_dict, output_path, sy
     # LaTeX header
     latex_code = [
         "\\definecolor{MyGreen}{rgb}{0.133, 0.545, 0.133}",
+        "\\definecolor{LightGray}{rgb}{0.95, 0.95, 0.95}",
+        "\\definecolor{LightBlue}{rgb}{0.95, 0.95, 1.0}",
         "{\\small",
         "\\begin{longtable}{>{\centering\\arraybackslash}p{2.3cm} c c c c}",
         "\\caption{Comparison of OMASeg and TotalSeg performance}",
@@ -170,23 +184,25 @@ def generate_latex_table(metric_data_1_dict, metric_data_2_dict, output_path, sy
                     "\\midrule"
                 )
 
-                for organ in system_grouped_data[system]:
+                for i, organ in enumerate(system_grouped_data[system]):
                     metric_1_row = df_1[df_1['Organ'] == organ].iloc[0]
                     metric_2_row = df_2[df_2['Organ'] == organ].iloc[0]
 
                     rows = generate_organ_row(organ, metric_1_row, metric_2_row,
-                                           metric_data_1_dict, metric_data_2_dict)
+                                           metric_data_1_dict, metric_data_2_dict,
+                                           is_odd=(i % 2 == 0))
                     latex_code.extend(rows)
                     latex_code.append("\\midrule")
 
     else:
         # plain order
-        for organ in df_1['Organ']:
+        for i, organ in enumerate(df_1['Organ']):
             metric_1_row = df_1[df_1['Organ'] == organ].iloc[0]
             metric_2_row = df_2[df_2['Organ'] == organ].iloc[0]
 
             rows = generate_organ_row(organ, metric_1_row, metric_2_row,
-                                           metric_data_1_dict, metric_data_2_dict)
+                                           metric_data_1_dict, metric_data_2_dict,
+                                           is_odd=(i % 2 == 0))
             latex_code.extend(rows)
             latex_code.append("\\midrule")
 
