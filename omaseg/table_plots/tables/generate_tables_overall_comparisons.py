@@ -31,7 +31,10 @@ def generate_latex_table(metric_data_1_dict, metric_data_2_dict, metric_type, ou
             value = value * 100
         
         if is_diff:
-            return f"{{+{value:.2f}}}" if value > 0 else f"{{{value:.2f}}}"
+            if value > 0:
+                return f"{{\\textuparrow{value:.2f}}}"
+            else:
+                return f"{{\\textdownarrow{abs(value):.2f}}}"
         return f"{value:.2f}"
     
     mutual_rows = []
@@ -67,8 +70,7 @@ def generate_latex_table(metric_data_1_dict, metric_data_2_dict, metric_type, ou
     
     # row Diff
     diff_values = [calc_diff(o, t) for o, t in zip(omaseg_values, totalseg_values)]
-    mutual_rows.append("& {Diff} & " + " & ".join(format_value(v, True, show_percentage=p) for v, p in zip(diff_values, show_percentages)) + " \\\\")
-    
+    mutual_rows.append("& {Diff} & " + " & ".join(f"{{\\textbf{{\\textcolor{{MyGreen}}{{{format_value(v, True, show_percentage=p)}}}}}}}" for v, p in zip(diff_values, show_percentages)) + " \\\\")    
     # row All targets
     all_values = [
         metric_1_data[('in', 'OMASeg', 'all')],
@@ -81,6 +83,7 @@ def generate_latex_table(metric_data_1_dict, metric_data_2_dict, metric_type, ou
     all_row = "& OMASeg & " + " & ".join(format_value(v, show_percentage=p) for v, p in zip(all_values, show_percentages)) + " \\\\[1ex]"
     
     latex_code = [
+        r"\definecolor{MyGreen}{rgb}{0.133, 0.545, 0.133}",
         r"\begin{table}[htbp]",
         r"\resizebox{\textwidth}{!}{",
         r"\begin{tabular}{>{\raggedright\arraybackslash}p{2.2cm} l S[table-format=+2.2] S[table-format=+2.2] S[table-format=+2.2] S[table-format=+2.2] S[table-format=+2.2] S[table-format=+2.2]}",
