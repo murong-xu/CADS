@@ -3,6 +3,13 @@ import numpy as np
 
 from omaseg.dataset_utils.datasets_labelmap import dataset_renamed
 
+METRIC_NAME_MAPPING = {
+    'dice': 'Dice',
+    'hd95': 'HD95',
+    'normalized_distance': 'NSD',
+    'hd': 'HD',
+}
+
 def read_summary_data(xlsx_path, metric='dice', use_median=False):
     sheet_name = f'{metric}_overlapping'
     df = pd.read_excel(xlsx_path, sheet_name=sheet_name)
@@ -104,7 +111,7 @@ def generate_grouped_latex_table(dataset_names, totalseg_values, omaseg_values, 
     latex_code.extend([
         r"\bottomrule",
         r"\end{tabular}}",
-        r"\caption{" + f"{metric_name.capitalize()}" + " comparison across different challenges/datasets}",
+        r"\caption{" + f"{METRIC_NAME_MAPPING[metric_name]}" + " comparison across different challenges/datasets}",
         r"\label{tab:dataset_comparison}",
         r"\end{table}"
     ])
@@ -113,23 +120,21 @@ def generate_grouped_latex_table(dataset_names, totalseg_values, omaseg_values, 
         f.write("\n".join(latex_code))
 
 if __name__ == "__main__":
-    metrics = [
-        'dice', 
-        # 'hd95',
-        # 'hd',
-        # 'normalized_distance'
-    ]
+    metric_dice = 'dice'
+    metric_hd95 = 'hd95'
+    metric_nsd = 'normalized_distance'
+    metric_hd = 'hd'
+
+    metric = metric_dice
     use_median = False
     result_type = 'filtered_unreliable'
 
     xlsx_path = f'/mnt/hdda/murong/22k/results/compare_totalseg_omaseg_p005/per-challenge/{result_type}/summary_all_datasets.xlsx'
     output_path = "/mnt/hdda/murong/22k/plots/latex_tables/kk.txt"    
 
-    for metric in metrics:
-        dataset_names, totalseg_values, omaseg_values = read_summary_data(
-            xlsx_path,
-            metric=metric,
-            use_median=use_median
-        )
-
-        generate_grouped_latex_table(dataset_names, totalseg_values, omaseg_values, datasets_per_row=9, metric_name=metric)
+    dataset_names, totalseg_values, omaseg_values = read_summary_data(
+        xlsx_path,
+        metric=metric,
+        use_median=use_median
+    )
+    generate_grouped_latex_table(dataset_names, totalseg_values, omaseg_values, datasets_per_row=9, metric_name=metric)
