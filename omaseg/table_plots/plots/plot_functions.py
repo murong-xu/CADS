@@ -263,7 +263,7 @@ def generate_boxplot_comparison(model1_scores, model2_scores, model1_name, model
                         weight='bold', 
                         color=significance_color)
     
-    plt.title(f'{metric_name} Comparison on {datasetname}' if datasetname else f'{metric_name} Comparison',
+    plt.title(f'{metric_name} Comparison: {datasetname}' if datasetname else f'{metric_name} Comparison',
              pad=20, fontsize=10, fontweight='bold')
     plt.grid(True, axis='y', linestyle='--', alpha=0.7)  
     plt.xticks(rotation=45, ha='right')

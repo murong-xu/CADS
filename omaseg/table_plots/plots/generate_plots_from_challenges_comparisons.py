@@ -5,6 +5,7 @@ import os
 from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed
 from omaseg.table_plots.utils.utils import filter_rows, transitional_ids, amos_uterus_ids, compare_models_stat_test
 from omaseg.table_plots.plots.plot_functions import generate_boxplot_comparison
+from omaseg.dataset_utils.datasets_labelmap import dataset_renamed
 
 datasets_eval = [
     '0001_visceral_gc',
@@ -175,5 +176,5 @@ if __name__ == "__main__":
                     stat_results=stat_results,
                     output_path=plot_output_path,
                     metric_name=metric.capitalize().replace('_', ' '),
-                    datasetname=dataset
+                    datasetname=dataset_renamed[dataset]
                 )

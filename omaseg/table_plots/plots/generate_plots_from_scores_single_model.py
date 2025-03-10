@@ -5,6 +5,7 @@ import numpy as np
 from omaseg.table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids
 from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed, structure_to_in_dist_training_dataset, anatomical_systems
 from omaseg.table_plots.plots.plot_functions import generate_box_plot, generate_box_plot_with_testdata_sources
+from omaseg.dataset_utils.datasets_labelmap import dataset_renamed
 
 
 def collect_scores(analysis_name, grouping_in_out_dist, prefix):
@@ -89,6 +90,9 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
                             df_tmp = df_tmp[~df_tmp["ids"].isin(amos_uterus_ids)]
                             df_tmp = filter_rows(df_tmp, splits=splits)
                             values = df_tmp[column].to_list()
+                        
+                        datasetname = dataset_renamed[datasetname]
+
                         if structure_is_in_dist and 'in' in structure_values:
                             structure_values['in'][table_names[j]].extend(
                                 values)
