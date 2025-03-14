@@ -690,12 +690,12 @@ anatomical_systems = {
     "Respiratory System": [
         "Upper lobe of lung L", "Lower lobe of lung L",
         "Upper lobe of lung R", "Middle lobe of lung R", "Lower lobe of lung R",
-        "Trachea", "Esophagus", "Larynx", "Mediastinum"
+        "Trachea", "Larynx"
     ],
     "Digestive System": [
         "Liver", "Stomach", "Pancreas", "Small intestine", "Duodenum", "Colon",
         "Gallbladder", "Sigmoid colon", "Rectum", "Oral cavity",
-        "Cervical esophagus", "Colostomy bag"
+        "Esophagus", "Cervical esophagus", "Colostomy bag"
     ],
     "Urinary System": [
         "Kidney R", "Kidney L", "Urinary bladder"
@@ -722,7 +722,7 @@ anatomical_systems = {
         "Spleen"
     ],
     "Body Cavities": [
-        "Abdominal cavity", "Thoracic cavity"
+        "Abdominal cavity", "Thoracic cavity", "Mediastinum"
     ],
     "Other Structures": [
         "Face", "Scalp", "Buccal mucosa", "Both lips",
