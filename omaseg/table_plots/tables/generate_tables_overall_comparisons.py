@@ -88,7 +88,7 @@ def generate_latex_table(metric_data_1_dict, metric_data_2_dict, metric_type, ou
         r"\resizebox{\textwidth}{!}{",
         r"\begin{tabular}{>{\raggedright\arraybackslash}p{2.2cm} l S[table-format=+2.2] S[table-format=+2.2] S[table-format=+2.2] S[table-format=+2.2] S[table-format=+2.2] S[table-format=+2.2]}",
         r"\toprule",
-        r"\multicolumn{2}{c}{\multirow{2}{*}{\textbf{Category}}} & \multicolumn{2}{c}{\textbf{In-distribution}} & \multicolumn{2}{c}{\textbf{Out-distribution}} & \multicolumn{2}{c}{\textbf{Full test data}} \\",
+                r"\multicolumn{2}{c}{\multirow{2}{*}{\textbf{Category}}} & \multicolumn{2}{c}{\textbf{\shortstack{Complete Annotation \\Test Set (Primary)}}} & \multicolumn{2}{c}{\textbf{\shortstack{Partial Annotation \\Test Set (Secondary)}}} & \multicolumn{2}{c}{\textbf{Full test data}} \\",
         r"\cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8}",
         f"& & {{\\textbf{{{metric_data_1_dict['name']} (\%)}}}} & {{\\textbf{{{metric_data_2_dict['name']}}}}} & {{\\textbf{{{metric_data_1_dict['name']} (\%)}}}} & {{\\textbf{{{metric_data_2_dict['name']}}}}} & {{\\textbf{{{metric_data_1_dict['name']} (\%)}}}} & {{\\textbf{{{metric_data_2_dict['name']}}}}} \\\\",
         r"\midrule",

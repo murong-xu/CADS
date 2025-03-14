@@ -911,7 +911,7 @@ def generate_radar_plot_normalized_metrics(model1_scores, model2_scores, model1_
     label_colors.append(label_colors[0])
 
     ax.fill(angles, transformed_scores1, color=MODEL1_COLOR, alpha=0.08, zorder=0)
-    ax.fill(angles, transformed_scores2, color=MODEL2_COLOR, alpha=0.06, zorder=1)
+    ax.fill(angles, transformed_scores2, color=MODEL2_COLOR, alpha=0.16, zorder=1)
 
     ax.plot(angles, transformed_scores1, 'o-', color=MODEL1_COLOR, linewidth=1, 
             label=model1_name, markersize=8, markerfacecolor=MODEL1_COLOR, 
