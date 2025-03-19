@@ -667,7 +667,7 @@ anatomical_systems = {
         "Rib-3 R", "Rib-4 R", "Rib-5 R", "Rib-6 R", "Rib-7 R", "Rib-8 R",
         "Rib-9 R", "Rib-10 R", "Rib-11 R", "Rib-12 R", "Humerus L", "Humerus R",
         "Scapula L", "Scapula R", "Clavicle L", "Clavicle R", "Femur L", "Femur R",
-        "Hip L", "Hip R", "Sacrum", "Sternum", "Mandible", "Compact bone", "Spongy bone"
+        "Hip L", "Hip R", "Sacrum", "Sternum", "Mandible", "Compact bone", "Spongy bone", "Bones"
     ],
     "Muscular System": [
         "Gluteus maximus muscle L", "Gluteus maximus muscle R",
@@ -685,17 +685,19 @@ anatomical_systems = {
         "Common iliac artery L", "Common iliac artery R",
         "Common iliac vein L", "Common iliac vein R",
         "Pulmonary artery", "Carotid artery L", "Carotid artery R",
-        "Blood"
+        "Blood", "Myocardium", "Atrium L", "Atrium R", "Heart ventricle L", "Heart ventricle R", "Heart",
+        "Pericardium"
     ],
     "Respiratory System": [
         "Upper lobe of lung L", "Lower lobe of lung L",
         "Upper lobe of lung R", "Middle lobe of lung R", "Lower lobe of lung R",
-        "Trachea", "Larynx"
+        "Trachea", "Larynx", "Arytenoid cartilage",
+        "Glottis", "Supraglottis",
     ],
     "Digestive System": [
         "Liver", "Stomach", "Pancreas", "Small intestine", "Duodenum", "Colon",
         "Gallbladder", "Sigmoid colon", "Rectum", "Oral cavity",
-        "Esophagus", "Cervical esophagus", "Colostomy bag"
+        "Esophagus", "Cervical esophagus", "Colostomy bag", "Cricopharyngeus"
     ],
     "Urinary System": [
         "Kidney R", "Kidney L", "Urinary bladder"
@@ -705,8 +707,8 @@ anatomical_systems = {
         "Prosthetic breast implant"
     ],
     "Endocrine System": [
-        "Adrenal gland R", "Adrenal gland L", "Thyroid", "Pituitary gland",
-        "Gland structure"
+        "Adrenal gland R", "Adrenal gland L",
+        "Gland structure", "Thyroid", "Pituitary gland",
     ],
     "Nervous System": [
         "Brain", "Spinal cord", "Optic nerve L", "Optic nerve R", "Optic chiasm",
@@ -716,7 +718,6 @@ anatomical_systems = {
         "Eyeball", "Cochlear L", "Cochlear R",
         "Anterior eyeball segment L", "Anterior eyeball segment R",
         "Posterior eyeball segment L", "Posterior eyeball segment R",
-        "Lacrimal gland L", "Lacrimal gland R"
     ],
     "Lymphatic and Immune System": [
         "Spleen"
@@ -726,11 +727,11 @@ anatomical_systems = {
     ],
     "Other Structures": [
         "Face", "Scalp", "Buccal mucosa", "Both lips",
-        "Subcutaneous tissue", "Pericardium", "Arytenoid cartilage",
-        "Glottis", "Supraglottis"
+        "Subcutaneous tissue",
     ],
     "Glandular System": [
         "Submandibular gland L", "Submandibular gland R",
-        "Parotid gland L", "Parotid gland R"
+        "Parotid gland L", "Parotid gland R",
+        "Lacrimal gland L", "Lacrimal gland R",
     ]
 }
