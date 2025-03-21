@@ -735,3 +735,223 @@ anatomical_systems = {
         "Lacrimal gland L", "Lacrimal gland R",
     ]
 }
+
+chest_CT_covered_structures = {
+    551: {
+        7: "aorta",
+        8: "inferior_vena_cava",
+        13: "lung_upper_lobe_left",
+        14: "lung_lower_lobe_left",
+        15: "lung_upper_lobe_right",
+        16: "lung_middle_lobe_right",
+        17: "lung_lower_lobe_right"
+    },
+    552: {
+        6: "vertebrae_T12",
+        7: "vertebrae_T11",
+        8: "vertebrae_T10",
+        9: "vertebrae_T9",
+        10: "vertebrae_T8",
+        11: "vertebrae_T7",
+        12: "vertebrae_T6",
+        13: "vertebrae_T5",
+        14: "vertebrae_T4",
+        15: "vertebrae_T3",
+        16: "vertebrae_T2",
+        17: "vertebrae_T1",
+        18: "vertebrae_C7",  # might partially included in chest CT
+        19: "vertebrae_C6",  # might partially included in chest CT
+    },
+    553: {
+        1: "esophagus",
+        2: "trachea",
+        3: "heart_myocardium",
+        4: "heart_atrium_left",
+        5: "heart_ventricle_left",
+        6: "heart_atrium_right",
+        7: "heart_ventricle_right",
+        8: "pulmonary_artery",
+    },
+    554: {
+        3: "scapula_left",
+        4: "scapula_right",
+        5: "clavicula_left",
+        6: "clavicula_right",
+    },
+    555: {
+        1: "rib_left_1",
+        2: "rib_left_2",
+        3: "rib_left_3",
+        4: "rib_left_4",
+        5: "rib_left_5",
+        6: "rib_left_6",
+        7: "rib_left_7",
+        8: "rib_left_8",
+        9: "rib_left_9",
+        10: "rib_left_10",
+        11: "rib_left_11",
+        12: "rib_left_12",
+        13: "rib_right_1",
+        14: "rib_right_2",
+        15: "rib_right_3",
+        16: "rib_right_4",
+        17: "rib_right_5",
+        18: "rib_right_6",
+        19: "rib_right_7",
+        20: "rib_right_8",
+        21: "rib_right_9",
+        22: "rib_right_10",
+        23: "rib_right_11",
+        24: "rib_right_12"
+    },
+    556: {
+        1: "spinal_canal",
+        2: "larynx",  # parent class of: supraglottis (558 index 21)
+        3: "heart",  # parent class of: heart chambers (553 index 3-7). For heart labels suggest to use heart chambers (553 index 3-7) or pericardium (559 index 7)
+        9: "left_mammary_gland",
+        10: "right_mammary_gland",
+        11: "sternum",
+    },
+    558: {
+        1: "OAR_A_Carotid_L",  # might partially included in chest CT
+        2: "OAR_A_Carotid_R",  # might partially included in chest CT
+        3: "OAR_Arytenoid",
+        20: "OAR_Glnd_Thyroid",
+        21: "OAR_Glottis",
+        22: "OAR_Larynx_SG",
+    },
+    559: {
+        4: "thoracic_cavity",  # parent class of: 5x lung lobes (551 index 13-17)
+        7: "pericardium",  # parent class of: heart chambers (553 index 3-7) and heart (556 index 3)
+        9: "mediastinum",
+    },
+}
+
+hierarchical_structures = {
+    "Type Anatomical Cavities": {
+        "Thoracic cavity": {
+            "Mediastinum": {
+                "Pericardium": {
+                    "Heart": [
+                        "Myocardium",
+                        "Atrium L",
+                        "Atrium R",
+                        "Heart ventricle L",
+                        "Heart ventricle R"
+                    ]
+                },
+                "Type Major Vessels": [
+                    "Aorta",  # partially included
+                    "Inferior vena cava",  # partially included
+                    "Pulmonary artery"
+                ]
+            },
+            "Type Lungs": {
+                "Type Left": [
+                    "Upper lobe of lung L",
+                    "Lower lobe of lung L"
+                ],
+                "Type Right": [
+                    "Upper lobe of lung R",
+                    "Middle lobe of lung R",
+                    "Lower lobe of lung R"
+                ]
+            },
+            "Type Airways": [
+                "Trachea",    # partially included
+                "Esophagus"   # partially included
+            ]
+        },
+        
+        "Abdominal cavity": {
+            "Type Upper Abdomen": [
+                "Liver",
+                "Spleen",
+                "Stomach",
+                "Pancreas"
+            ]
+        }
+    },
+
+    "Type Organ Systems": {
+        "Brain": [
+            "White matter",
+            "Gray matter",
+            "Brainstem"
+        ],
+        "Type Eye": {
+            "Eyeball": [
+                "Posterior eyeball segment R",
+                "Posterior eyeball segment L"
+            ],
+            "Eyeball front": [
+                "Anterior eyeball segment L",
+                "Anterior eyeball segment R"
+            ]
+        },
+        "Larynx": [
+            "Arytenoid cartilage",
+            "Glottis",
+            "Supraglottis"  # partially included
+        ]
+    },
+
+    "Type Generic Categories": {
+        "Bones": {
+            "Type Vertebrae": {
+                "Type Cervical": ["Vertebra C1", "Vertebra C2", "Vertebra C3", "Vertebra C4", "Vertebra C5", "Vertebra C6", "Vertebra C7"],
+                "Type Thoracic": ["Vertebra T1", "Vertebra T2", "Vertebra T3", "Vertebra T4", "Vertebra T5", "Vertebra T6", 
+                            "Vertebra T7", "Vertebra T8", "Vertebra T9", "Vertebra T10", "Vertebra T11", "Vertebra T12"],
+                "Type Lumbar": ["Vertebra L1", "Vertebra L2", "Vertebra L3", "Vertebra L4", "Vertebra L5"]
+            },
+            "Type Ribs": {
+                "Type Left": [f"Rib-{i} L" for i in range(1, 13)],
+                "Type Right": [f"Rib-{i} R" for i in range(1, 13)]
+            },
+            "Type Other Bones": [
+                "Sternum",
+                "Humerus L",
+                "Humerus R",
+                "Scapula L",
+                "Scapula R",
+                "Clavicle L",
+                "Clavicle R",
+                "Femur L",
+                "Femur R",
+                "Hip L",
+                "Hip R",
+                "Sacrum",
+                "Compact bone",
+                "Spongy bone"
+            ]
+        },
+        "Muscles": {
+            "Type Back Muscles": [
+                "Deep muscle of back L",
+                "Deep muscle of back R"
+            ],
+            "Type Gluteal Muscles": [
+                "Gluteus maximus muscle L",
+                "Gluteus maximus muscle R",
+                "Gluteus medius muscle L",  
+                "Gluteus medius muscle R",
+                "Gluteus minius muscle L",
+                "Gluteus minius muscle R"
+            ],
+            "Type Other Muscles": [
+                "Muscle of head",
+                "Iliopsoas muscle L",
+                "Iliopsoas muscle R",
+                "Psoas major muscle L",
+                "Psoas major muscle R",
+                "Rectus abdominis muscle L",
+                "Rectus abdominis muscle R"
+            ]
+        },
+        "Glands": [
+            "Thyroid",
+            "Parotid gland L/R",
+            "Submandibular gland L/R"
+        ]
+    }
+}
