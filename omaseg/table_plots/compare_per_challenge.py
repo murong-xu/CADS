@@ -3,7 +3,7 @@ import glob
 import os
 
 from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed
-from omaseg.table_plots.utils.utils import filter_rows, transitional_ids, amos_uterus_ids, compare_models_stat_test
+from omaseg.table_plots.utils.utils import filter_rows, transitional_ids, amos_uterus_ids, compare_models_stat_test, ambigious_gt_structures_to_skip
 
 # TODO: param
 output_folder = '/mnt/hdda/murong/22k/results/compare_totalseg_omaseg_p005'
@@ -74,6 +74,7 @@ prefixes = ['dice', 'hd95', 'hd', 'normalized_distance']
 filter_transitional_in_verse = True
 significance_level = 0.05  #TODO: test more values
 do_benjamini_hochberg = False
+skip_ambigious_gt_eval = True
 
 for prefix in prefixes:
     if prefix in ['dice', 'normalized_distance']:
@@ -95,6 +96,11 @@ for prefix in prefixes:
                     continue
                 if dataset == '0010_verse' and filter_transitional_in_verse:
                     df = df[~df["ids"].isin(transitional_ids)]
+                if skip_ambigious_gt_eval:
+                    for key, value in ambigious_gt_structures_to_skip.items():
+                        if key in dataset:
+                            if value in df.columns:
+                                df = df.drop(value, axis=1)
                 df = filter_rows(df, splits=splits)
 
                 for column in df.columns:

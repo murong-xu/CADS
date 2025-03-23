@@ -4,7 +4,7 @@ import os
 import pickle
 from collections import defaultdict
 
-from omaseg.table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids, bootstrap_ci, check_distribution_perform_stat_test, benjamini_hochberg_correction
+from omaseg.table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids, bootstrap_ci, check_distribution_perform_stat_test, benjamini_hochberg_correction, ambigious_gt_structures_to_skip
 from omaseg.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed, totalseg_exclude_to_compare, structure_to_in_dist_training_dataset
 
 
@@ -44,6 +44,7 @@ significance_level = 0.05 #TODO: test more values
 do_benjamini_hochberg = False
 filter_transitional_in_verse = True
 exclude_face_from_overall_score = True
+skip_ambigious_gt_eval = True
 
 path_count_GT_number = '/mnt/hdda/murong/22k/results/per_structure_GT_image_counts.pkl'
 path_count_GT_from_totalseg_number = '/mnt/hdda/murong/22k/results/per_structure_GT_image_from_totalseg_counts.pkl'
@@ -110,6 +111,12 @@ for prefix in prefixes:
                 continue
             if '0010_verse' in base and filter_transitional_in_verse:
                 df = df[~df["ids"].isin(transitional_ids)]
+            if skip_ambigious_gt_eval:
+                for key, value in ambigious_gt_structures_to_skip.items():
+                    if key in base:
+                        if value in df.columns:
+                            df = df.drop(value, axis=1)
+                        
             df = filter_rows(df, splits=splits)
             column_names = df.columns
 

@@ -836,3 +836,7 @@ transitional_ids = ["sub-verse131_ct", "sub-verse530_ct", "sub-verse542_dir-iso_
 amos_uterus_ids = ['amos_0004', 'amos_0035', 'amos_0064', 'amos_0109', 'amos_0149', 'amos_0158', 'amos_0171', 'amos_0215', 'amos_0237', 'amos_0299', 'amos_0336', 'amos_0395']
 
 totalseg_out_dist_structures = ['heart_myocardium', 'heart_atrium_left', 'heart_ventricle_left', 'heart_atrium_right', 'heart_ventricle_right', 'pulmonary_artery', 'face', 'larynx', 'OAR_Brainstem', 'OAR_Glnd_Submand_L', 'OAR_Glnd_Submand_R', 'OAR_OpticNrv_L', 'OAR_OpticNrv_R', 'OAR_Parotid_L', 'OAR_Parotid_R']
+
+ambigious_gt_structures_to_skip = {
+    '0039_han_seg': 'spinal_cord'  # incomplete annotation, ends around neck
+}

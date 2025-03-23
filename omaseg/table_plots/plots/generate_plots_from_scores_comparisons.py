@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-from omaseg.table_plots.utils.utils import filter_rows, list_specific_files, transitional_ids, amos_uterus_ids, compare_models_stat_test
+from omaseg.table_plots.utils.utils import filter_rows, list_specific_files, transitional_ids, amos_uterus_ids, compare_models_stat_test, ambigious_gt_structures_to_skip
 from omaseg.dataset_utils.bodyparts_labelmaps import anatomical_systems, labelmap_all_structure, labelmap_all_structure_renamed, structure_to_in_dist_training_dataset
 from omaseg.table_plots.plots.plot_functions import generate_histogram_plot
 
@@ -32,6 +32,7 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix, distribution):
     filter_transitional_in_verse = True
     significance_level = 0.05  #TODO: test more values
     do_benjamini_hochberg = False
+    skip_ambigious_gt_eval = True
 
     if prefix in ['dice', 'normalized_distance']:
         higher_better = True
@@ -63,6 +64,11 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix, distribution):
                 continue
             if '0010_verse' in base and filter_transitional_in_verse:
                 df = df[~df["ids"].isin(transitional_ids)]
+            if skip_ambigious_gt_eval:
+                for key, value in ambigious_gt_structures_to_skip.items():
+                    if key in base:
+                        if value in df.columns:
+                            df = df.drop(value, axis=1)
             df = filter_rows(df, splits=splits)
             column_names = df.columns
 
