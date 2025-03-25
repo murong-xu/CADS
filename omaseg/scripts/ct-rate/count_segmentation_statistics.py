@@ -30,17 +30,22 @@ def process_single_case(subfolder, part, labelmap):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-part", '--part', type=int, required=True)
+    parser.add_argument("-idx_start", '--idx_start', type=int, required=True)
+    parser.add_argument("-idx_end", '--idx_end', type=int, required=True)
     args = parser.parse_args()
 
     part = args.part
+    idx_start = args.idx_start
+    idx_end = args.idx_end
     file_unique_folders = '/net/cephfs/shares/menze.dqbm.uzh/murong/CT-RATE_segmentations/seg_unique_train.pkl'  #TODO:
     with open(file_unique_folders, 'rb') as f:
         unique_folders = pickle.load(f)
         f.close()
     unique_folders.sort()
+    unique_folders = unique_folders[idx_start:idx_end]
 
     outputfolder = "/net/cephfs/shares/menze.dqbm.uzh/murong/CT-RATE_segmentations/segmentation_statistics"  #TODO:
-    output_filename = f'train_summary_{part}'  #TODO:
+    output_filename = f'train_summary_{part}_{idx_start}_{idx_end}'  #TODO:
 
     labelmap = map_taskid_to_labelmaps[part]
     
