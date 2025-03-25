@@ -5,6 +5,7 @@ import numpy as np
 import nibabel as nib
 import pandas as pd
 from tqdm import tqdm
+import pickle
 from omaseg.dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
 
 def process_single_case(subfolder, part, labelmap):
@@ -32,23 +33,25 @@ def main():
     args = parser.parse_args()
 
     part = args.part
-    predfolder = '/mnt/hdda/murong/debug_ctrate/train'  #TODO:
-    outputfolder = "/mnt/hdda/murong/debug_ctrate"  #TODO:
-    output_filename = f'debug_summary_{part}'  #TODO:
+    file_unique_folders = '/net/cephfs/shares/menze.dqbm.uzh/murong/CT-RATE_segmentations/seg_unique_train.pkl'  #TODO:
+    with open(file_unique_folders, 'rb') as f:
+        unique_folders = pickle.load(f)
+        f.close()
+    unique_folders.sort()
+
+    outputfolder = "/net/cephfs/shares/menze.dqbm.uzh/murong/CT-RATE_segmentations/segmentation_statistics"  #TODO:
+    output_filename = f'train_summary_{part}'  #TODO:
 
     labelmap = map_taskid_to_labelmaps[part]
     
     columns = ['patientid']
     names = [labelmap[i] for i in range(1, max(labelmap.keys()) + 1)]
     columns.extend(names)
-
-    pattern = os.path.join(predfolder, '*/*_*/')
-    unique_folders = sorted(glob.glob(pattern))
     info = []
     
     print(f"Processing {len(unique_folders)} cases...")
     for folder in tqdm(unique_folders):
-        subfolder = sorted(glob.glob(folder + '*'))[0]
+        subfolder = sorted(glob.glob(folder + '/*'))[0]
         case_info = process_single_case(subfolder, part, labelmap)
         info.append(case_info)
 
