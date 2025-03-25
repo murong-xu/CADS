@@ -49,11 +49,14 @@ def main():
     columns.extend(names)
     info = []
     
-    print(f"Processing {len(unique_folders)} cases...")
+    total = len(unique_folders)
+    count = 1
     for folder in tqdm(unique_folders):
+        print(f'Processing {count}/{total}...')
         subfolder = sorted(glob.glob(folder + '/*'))[0]
         case_info = process_single_case(subfolder, part, labelmap)
         info.append(case_info)
+        count += 1
 
     info = np.asarray(info)
     df = pd.DataFrame(info, columns=columns)
