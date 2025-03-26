@@ -704,7 +704,6 @@ anatomical_systems = {
     ],
     "Reproductive System": [
         "Prostate", "Seminal vesicle", "Mammary gland L", "Mammary gland R",
-        "Prosthetic breast implant"
     ],
     "Endocrine System": [
         "Adrenal gland R", "Adrenal gland L",
@@ -727,7 +726,7 @@ anatomical_systems = {
     ],
     "Other Structures": [
         "Face", "Scalp", "Buccal mucosa", "Both lips",
-        "Subcutaneous tissue",
+        "Subcutaneous tissue", "Prosthetic breast implant"
     ],
     "Glandular System": [
         "Submandibular gland L", "Submandibular gland R",
