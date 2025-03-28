@@ -46,8 +46,8 @@ STRUCTURE_NAME_MAPPING = {
 }
 
 def collect_scores(prefix):
-    jsonfile_totalseg = '/mnt/hdda/murong/22k/results/usz/STAT/updated_TS.json'
-    jsonfile_omaseg = '/mnt/hdda/murong/22k/results/usz/STAT/OMA.json'
+    jsonfile_totalseg = '/mnt/hdda/murong/22k/results/usz/STAT_new/TS_updated.json'
+    jsonfile_omaseg = '/mnt/hdda/murong/22k/results/usz/STAT_new/OMA_updated.json'
 
     score_higher_is_better_metrics = ['Dice', 'normalized_surface_dice', 'TPR']
     significance_level = 0.05
@@ -156,3 +156,4 @@ if __name__ == "__main__":
             metric_name=metric.capitalize().replace('_', ' '),
             datasetname='USZ In-house Data'
         )
+ 

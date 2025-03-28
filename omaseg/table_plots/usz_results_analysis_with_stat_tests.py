@@ -6,10 +6,10 @@ import json
 
 from omaseg.table_plots.utils.utils import align_and_filter_scores, bootstrap_ci, check_distribution_perform_stat_test, benjamini_hochberg_correction
 
-jsonfile_totalseg = '/mnt/hdda/murong/22k/results/usz/STAT/updated_TS.json'
-jsonfile_omaseg = '/mnt/hdda/murong/22k/results/usz/STAT/OMA.json'
+jsonfile_totalseg = '/mnt/hdda/murong/22k/results/usz/STAT_new/TS_updated.json'
+jsonfile_omaseg = '/mnt/hdda/murong/22k/results/usz/STAT_new/OMA_updated.json'
 
-output_folder = '/mnt/hdda/murong/22k/results/usz/analysis_p005'  # TODO
+output_folder = '/mnt/hdda/murong/22k/results/usz/analysis_p005_new'  # TODO
 analysis_name = 'compare_omaseg_totalseg'  # TODO
 
 prefixes = ['Dice', 'normalized_surface_dice', 'hausdorff_dist', 'hausdorff_dist_95', 'TPR', 'FPR', 'vol_error']

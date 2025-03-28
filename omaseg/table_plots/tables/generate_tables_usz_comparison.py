@@ -232,7 +232,7 @@ if __name__ == "__main__":
     metric = metric_dice
     use_median = True  # for this large cohort 
 
-    xlsx_path = f'/mnt/hdda/murong/22k/results/usz/analysis_p005/compare_omaseg_totalseg/{metric}_compare_table.xlsx'
+    xlsx_path = f'/mnt/hdda/murong/22k/results/usz/analysis_p005_new/compare_omaseg_totalseg/{metric}_compare_table.xlsx'
     output_path = "/mnt/hdda/murong/22k/plots/latex_tables/kk.txt"    
 
     organ_names, totalseg_values, omaseg_values = read_summary_data(
