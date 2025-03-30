@@ -35,18 +35,18 @@ This project aims to provide the medical imaging community with both a diverse d
 ## Installation
 ```bash
 # 1. Clone the repository
-git clone git@github.com:murong-xu/OMASeg.git
-# or download from https://github.com/murong-xu/OMASeg
+git clone git@github.com:murong-xu/CADS.git
+# or download from https://github.com/murong-xu/CADS
 
 # 2. Create and activate conda environment
-conda create -n CADS python=3.11
-conda activate CADS
+conda create -n CADS_env python=3.11
+conda activate CADS_env
 
 # 3. Install PyTorch
 # Visit https://pytorch.org/ for the correct installation command for your system
 
 # 4. Install CADS
-cd OMASeg
+cd CADS
 pip install -e .
 ```
 
@@ -54,7 +54,7 @@ pip install -e .
 Example script for running inference using the `predict()` function:
 
 ```python
-python omaseg/scripts/predict_images.py \
+python cads/scripts/predict_images.py \
     -in "/path/to/ct_images" \  # Directory containing .nii.gz CT files
     -out "/path/to/output" \    # Output directory
     -model "/path/to/models" \  # Directory containing model weights
@@ -74,7 +74,7 @@ If you find this work useful, please cite:
     title = {CADS: Comprehensive Anatomical Dataset and Segmentation for Whole-body CT},
     institution = {Department of Quantitative Biomedicine, University of Zurich},
     year = {2025},
-    url = {https://github.com/murong-xu/OMASeg},
+    url = {https://github.com/murong-xu/CADS},
     type = {Technical Report}
 }
 ```
