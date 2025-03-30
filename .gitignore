@@ -168,4 +168,4 @@ cython_debug/
 set_vars.sh
 .vscode/
 models/
-omaseg/temp_results/
+cads/temp_results/

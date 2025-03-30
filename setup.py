@@ -1,18 +1,18 @@
 from setuptools import setup, find_packages
 import os
 
-setup(name='OMASeg',
+setup(name='CADS',
         version='0.0.1',
         description='Robust segmentation of 167 classes in CT images.',
         long_description="See Readme.md on github for more details.",
-        url='https://github.com/murong-xu/OMASeg/tree/dev',
+        url='https://github.com/murong-xu/CADS',
         author='Murong Xu',
         author_email='murong.xu@uzh.ch',
         python_requires='>=3.9',
         license='Apache 2.0',
         packages=find_packages(),
         package_dir={
-            'omaseg': 'omaseg', 
+            'cads': 'cads', 
         },
         install_requires=[
             'torch>=2.0.0',
@@ -42,7 +42,7 @@ setup(name='OMASeg',
         ],
         entry_points={
             'console_scripts': [
-                'OMASegSlicer=omaseg.scripts.predict_slicer:main'
+                'CADSSlicer=cads.scripts.predict_slicer:main'
             ],
         },
     )
