@@ -29,7 +29,7 @@ setup(name='CADS',
             'dicom2nifti',
             'pyarrow', 
             'psutil',
-            'TPTBox;python_version>="3.10"',
+            'TPTBox==0.2.2;python_version>="3.10"',
             'opencv-python;python_version<"3.10"'
         ],
         zip_safe=False,
