@@ -16,6 +16,20 @@ MODEL2_COLOR = "#ffa505"
 # MODEL1_COLOR = "#765898"
 # MODEL2_COLOR = "#52d053"
 
+BASELINE_COLORS = {
+    'baseline1': '#FF1E1E',  # light red
+    'baseline2': '#1E90FF',  # light blue
+    'baseline3': '#FFD700',  # gold
+    'baseline4': '#32CD32',  # light green
+    'baseline5': '#FF1493',  # dark pink
+    'baseline6': '#00FFFF',  # blue
+    'baseline7': '#FF8C00',  # dark orange
+    'baseline8': '#8A2BE2',  # purple blue
+    'baseline9': '#00FF7F',  # spring green
+    'baseline10': '#FF69B4', # pink
+    }
+
+
 def generate_histogram_plot(model1_scores, model2_scores, model1_name, model2_name, 
                           stat_results, output_path, metric_name, system_group, anatomical_systems):
     """
@@ -822,7 +836,7 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
     
     return ax_main, ax_sets, ax_legend
 
-def generate_radar_plot_normalized_metrics(model1_scores, model2_scores, model1_name, model2_name, output_path, title="Radar Plot", 
+def generate_radar_plot_normalized_metrics(model1_scores, model2_scores, model1_name, model2_name, baseline_scores, output_path, title="Radar Plot", 
                        circle_positions=None, system_groups=None, highlight_high_scores=False, focus_point=0.9, power=3):
     """
     Generate radar plot for normalized metrics (0-1 range, with 0 the worst and 1 the best).
@@ -966,9 +980,31 @@ def generate_radar_plot_normalized_metrics(model1_scores, model2_scores, model1_
                 fontsize=22,
                 color=color)
 
+    if baseline_scores:
+        for i, (baseline_name, scores) in enumerate(baseline_scores.items()):
+            color = BASELINE_COLORS[f'baseline{i+1}'] 
+            marker = 'P'
+            # create handle for legends
+            baseline_handle = plt.Line2D([], [], marker=marker, color=color,
+                                       markerfacecolor=color, markeredgecolor='black',
+                                       markersize=10, linestyle='None',
+                                       label=baseline_name)
+            handles.append(baseline_handle)
+            
+            # scatter plot baseline results
+            for label in ordered_labels:
+                if label in scores:
+                    score = scores[label]
+                    if highlight_high_scores:
+                        score = highlight_transform(score, focus_point, power)
+                    angle = angles[ordered_labels.index(label)]
+                    ax.plot(angle, score, marker, color=color, 
+                           markersize=15, markerfacecolor=color,
+                           markeredgecolor='black', zorder=5)
+    # model legend
     model_legend = ax.legend(handles=handles,
                             loc='center left', 
-                            bbox_to_anchor=(1.05, 0.95),
+                            bbox_to_anchor=(1.1, 0.95),
                             fontsize=20,
                             title="Models",
                             title_fontsize=25)
@@ -980,7 +1016,7 @@ def generate_radar_plot_normalized_metrics(model1_scores, model2_scores, model1_
         system_legend = ax.legend(system_patches, 
                                 system_groups.keys(), 
                                 loc='center left', 
-                                bbox_to_anchor=(1.05, 0.7),
+                                bbox_to_anchor=(1.1, 0.62),
                                 title="Anatomical Systems", 
                                 fontsize=20, 
                                 title_fontsize=25)

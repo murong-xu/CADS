@@ -35,6 +35,19 @@ if __name__ == "__main__":
         'median',
         'mean',
     ]
+    baseline_scores = {
+    'VISCERAL Gold Corpus': {'Liver': 0.9, 'Spleen': 0.802, "Pancreas": 0.465, "Gallbladder": 0.334, "Urinary bladder": 0.676, "Aorta": 0.785, "Trachea": 0.847, "Sternum": 0.648, "Thyroid": 0.469, "Kidney R": 0.877, "Kidney L": 0.903, "Adrenal gland R": 0.138, "Adrenal gland L": 0.165, "Psoas major muscle R": 0.771, "Psoas major muscle L": 0.772},  # Best results from Ga1 w/wo contrast, skip rectus abdominis and lungs
+    'VISCERAL Silver Corpus': {'Liver': 0.94, 'Spleen': 0.89, "Pancreas": 0.47, "Gallbladder": 0.54, "Urinary bladder": 0.86, "Aorta": 0.82, "Trachea": 0.93, "Sternum": 0.83, "Thyroid": 0.57, "Kidney R": 0.94, "Kidney L": 0.93, "Adrenal gland R": 0.35, "Adrenal gland L": 0.36, "Psoas major muscle R": 0.86, "Psoas major muscle L": 0.85, "Rectus abdominis muscle R": 0.69, "Rectus abdominis muscle L": 0.64}, # Best results from w/wo contrast, skip lungs
+    # 'KiTS': , # Kidney?
+    'LiTS': {"Liver": 0.963},
+    # 'BTCV-Abdomen': , # avg?
+    'BTCV-Cervix': {'Urinary bladder': 0.8303, 'Rectum': 0.64722, 'Small intestine': 0.35239}, # free competition
+    'CHAOS': {'Liver': 0.9779}, # PKDIA
+    'CT-ORG': {'Liver': 0.952, 'Urinary bladder': 0.777, },  # NN 3d UNet, skip lungs kidneys
+    'AbdomenCT-1K': {'Liver': 0.962, 'Spleen': 0.949, 'Pancreas': 0.829},  # semi-supervised subtask2, skip kidney
+    # 'VerSe': # avg?
+    'SLIVER07': {'Liver': 0.917}, # grand challenge leaderboard
+} 
     for result_type in result_types:
         for metric in metrics:
             for metric_avg_type in metric_avg_types:
@@ -48,6 +61,7 @@ if __name__ == "__main__":
                         model2_scores=omaseg_scores,
                         model1_name='TotalSeg',
                         model2_name='CADS',
+                        baseline_scores=baseline_scores,
                         output_path=f"/mnt/hdda/murong/22k/plots/{result_type}/per_structure/radar_plot_all_{metric_avg_type}_{metric}.png",
                         title=f"Structure-wise {metric_avg_type.capitalize()} {metric.capitalize()} Score Comparison (Full Dataset)",
                         highlight_high_scores=PLOT_CONFIG[metric]['highlight_high_scores'],
