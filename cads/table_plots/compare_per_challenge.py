@@ -12,6 +12,7 @@ output_folder = '/mnt/hdda/murong/22k/results/compare_totalseg_omaseg_p005'
 analysis_name = 'filtered_unreliable_and_limited_fov'
 # analysis_name = 'filtered_unreliable'
 # analysis_name = 'original_GT_but_remove_limited_fov'
+# analysis_name = 'single_source_baseline'
 
 if analysis_name == 'filtered_unreliable_and_limited_fov':
     experiment_results_path = {
@@ -33,6 +34,11 @@ if analysis_name == 'original_GT_but_remove_limited_fov':
         'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_remove_limited_fov/test_0',
         'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/totalseg/metrics_remove_limited_fov/test_0',
     }
+if analysis_name == 'single_source_baseline':
+    experiment_results_path = {
+        'omaseg': '/mnt/hdda/murong/22k/ct_predictions/final_models/scores_labelata_confirmed_reliable_GT_notdo_FOV/test_0',
+        'totalsegmentator': '/mnt/hdda/murong/22k/ct_predictions/baselines/single-source_scores/test_0',
+    }    
 
 experiment_to_name_dict = {
     'omaseg': 'OMASeg',
