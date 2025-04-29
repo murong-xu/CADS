@@ -30,7 +30,8 @@ setup(name='CADS',
             'pyarrow', 
             'psutil',
             'TPTBox==0.2.2;python_version>="3.10"',
-            'opencv-python;python_version<"3.10"'
+            'TPTBox==0.3.0;python_version=="3.9"',
+            'acvl_utils==0.2;python_version=="3.9"',  # temporary workaround for nnUNetv2 issue
         ],
         zip_safe=False,
         classifiers=[

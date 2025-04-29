@@ -125,7 +125,7 @@ labels_info = {
     "unused": {"typ": "digenstion", "min": 1, "max": 1, "autofix": 1000},
 }
 
-
+# legacy functions (used to replace TPTBox when python==3.9)
 def get_largest_k_connected_components(
     arr: np.ndarray,
     k: Optional[int] = None,

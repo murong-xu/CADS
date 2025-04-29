@@ -15,6 +15,7 @@ from cads.dataset_utils.preprocessing import preprocess_nifti, restore_seg_in_or
 from cads.dataset_utils.postprocessing import _do_outlier_postprocessing_groups, postprocess_head, postprocess_head_and_neck
 from cads.utils.snapshot import generate_snapshot
 from cads.utils.libs import time_it, cleanup_temp_files
+from cads.dataset_utils.TPTBox import postprocess_seg_TPTBox
 
 TRAINERS = {
     551: 'nnUNetTrainerNoMirroring__nnUNetResEncUNetLPlans__3d_fullres',
@@ -199,12 +200,7 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', run_in_sl
 
             if postprocess_cads:
                 if task_id in _do_outlier_postprocessing_groups:
-                    if run_in_slicer:
-                        from cads.dataset_utils.postprocessing import postprocess_seg
-                        postprocess_seg(file_out, task_id, file_out)
-                    else:
-                        from cads.dataset_utils.TPTBox import postprocess_seg_TPTBox  #TODO: simplfy import
-                        postprocess_seg_TPTBox(file_out, task_id, file_out)
+                    postprocess_seg_TPTBox(file_out, task_id, file_out)
                 if task_id in [557, 558]:
                     file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
                     if not os.path.exists(file_seg_brain_group):

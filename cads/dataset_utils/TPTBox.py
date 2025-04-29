@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Union
 
 from cads.dataset_utils.bodyparts_labelmaps import map_taskid_to_labelmaps
 from cads.dataset_utils.postprocessing import labels_info
@@ -7,9 +8,9 @@ from TPTBox import NII, to_nii
 from TPTBox.logger import Print_Logger
 
 
-### TPTBOX ONLY EXECUTABLE FOR PYTHON>=3.10!!!!!
+### TPTBOX NOW EXECUTABLE FOR PYTHON>=3.9
 
-def postprocess_seg_TPTBox(seg_path: Path | str | NII, task_id: int, out_path: Path | str | None = None, aggressiveness=1, verbose=False):
+def postprocess_seg_TPTBox(seg_path: Union[Path, str, NII], task_id: int, out_path: Union[Path, str, None] = None, aggressiveness=1, verbose=False):
     nii = to_nii(seg_path, True)
     logger = Print_Logger()
     for idx, key in map_taskid_to_labelmaps[task_id].items():
@@ -44,9 +45,9 @@ def postprocess_seg_TPTBox(seg_path: Path | str | NII, task_id: int, out_path: P
 
 def filter_connected_components_TPTBox(
     self: NII,
-    labels: int | list[int] | None,
-    min_volume: int | None = None,
-    max_volume: int | None = None,
+    labels: Union[int, list[int], None],
+    min_volume: Union[int, None] = None,
+    max_volume: Union[int, None] = None,
     max_count_component=None,
     connectivity: int = 3,
     removed_to_label=0,
