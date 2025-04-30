@@ -74,8 +74,7 @@ def main():
     setup_nnunet_env()
 
     task_ids.sort()
-    predict(input_images, output_seg_folder, model_folder, task_ids, folds=folds,
-            run_in_slicer=False, use_cpu=args.cpu,
+    predict(input_images, output_seg_folder, model_folder, task_ids, folds=folds, use_cpu=args.cpu,
             preprocess_cads=args.preprocessing, postprocess_cads=args.postprocessing,
             save_all_combined_seg=False, snapshot=False, save_separate_targets=False,
             num_threads_preprocessing=args.nr_thr_preprocess, nr_threads_saving=args.nr_thr_saving, verbose=args.verbose)

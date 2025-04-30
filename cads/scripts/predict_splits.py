@@ -98,8 +98,7 @@ def main():
             args.input_folder) for filename in filenames if filename.endswith(".nii.gz")]
     test_images.sort()
 
-    predict(test_images, args.output_folder, args.model_folder, args.task_id, folds=folds, 
-            run_in_slicer=False, use_cpu=False,
+    predict(test_images, args.output_folder, args.model_folder, args.task_id, folds=folds, use_cpu=False,
             preprocess_cads=args.preprocessing, postprocess_cads = args.postprocessing, 
             save_all_combined_seg=args.save_all_combined_seg, snapshot=args.snapshot, save_separate_targets=args.save_targets,
             num_threads_preprocessing=args.nr_thr_preprocess, nr_threads_saving=args.nr_thr_saving, verbose=args.verbose)
