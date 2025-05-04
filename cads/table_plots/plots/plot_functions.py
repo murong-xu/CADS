@@ -13,21 +13,25 @@ from cads.table_plots.plots.utils import anatomical_system_colors
 MODEL1_COLOR = "#871282"
 MODEL2_COLOR = "#ffa505"
 # purple / green
-# MODEL1_COLOR = "#765898"
+# MODEL1_COLOR = "#8B0000"
 # MODEL2_COLOR = "#52d053"
 
 BASELINE_COLORS = {
-    'baseline1': '#FF1E1E',  # light red
-    'baseline2': '#1E90FF',  # light blue
-    'baseline3': '#FFD700',  # gold
-    'baseline4': '#32CD32',  # light green
-    'baseline5': '#FF1493',  # dark pink
-    'baseline6': '#00FFFF',  # blue
-    'baseline7': '#FF8C00',  # dark orange
-    'baseline8': '#8A2BE2',  # purple blue
-    'baseline9': '#00FF7F',  # spring green
-    'baseline10': '#FF69B4', # pink
-    }
+    'baseline1': '#FF1E1E',   # light red
+    'baseline2': '#1E90FF',   # light blue
+    'baseline3': '#FFD700',   # gold
+    'baseline4': '#32CD32',   # light green
+    'baseline5': '#4B0082',   # indigo
+    'baseline6': '#00FFFF',   # blue
+    'baseline7': '#FF8C00',   # dark orange
+    'baseline8': '#8A2BE2',   # purple blue
+    'baseline9': '#00FF7F',   # spring green
+    'baseline10': '#FF69B4',  # pink
+    'baseline11': '#9370DB',  # medium purple
+    'baseline12': '#20B2AA',  # light sea green
+    'baseline13': '#BA55D3',  # medium orchid
+    'baseline14': '#3CB371',  # medium sea green
+}
 
 
 def generate_histogram_plot(model1_scores, model2_scores, model1_name, model2_name, 
@@ -511,9 +515,9 @@ def generate_box_plot(results_dict, metric_name='DSC', output_path=None, title="
         prev_system = row['System']
         y_coords.append(i)
     
-    ax.set_xlabel(metric_name, fontsize=12)
-    ax.set_ylabel('Organ', fontsize=12)
-    plt.title(title, pad=20, fontsize=14, fontweight='bold')
+    ax.set_xlabel(metric_name, fontsize=16)
+    ax.set_ylabel('Organ', fontsize=16)
+    # plt.title(title, pad=20, fontsize=14, fontweight='bold')
     ax.grid(True, axis='x', linestyle='--', alpha=0.7)
     
     plt.legend(title='Anatomical Systems', 
@@ -772,8 +776,8 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
             ax_sets.axhline(y=i-0.5, color='gray', linestyle='--', alpha=0.3)
         prev_system = row['System']
     
-    ax_main.set_xlabel(metric_name, fontsize=12)
-    ax_main.set_title(title, pad=20, fontsize=14, fontweight='bold')
+    ax_main.set_xlabel(metric_name, fontsize=16)
+    # ax_main.set_title(title, pad=20, fontsize=14, fontweight='bold')
     ax_main.grid(True, axis='x', linestyle='--', alpha=0.7)
     ax_main.set_xlim(x_min, right_edge + text_begin + text_spacing + final_margin)
     
@@ -914,7 +918,7 @@ def generate_radar_plot_normalized_metrics(model1_scores, model2_scores, model1_
         transformed_circles = circle_positions
 
     fig = plt.figure(figsize=(30, 30))
-    fig.suptitle(title, fontsize=50, y=0.95)
+    # fig.suptitle(title, fontsize=50, y=0.95)
     ax = fig.add_subplot(111, projection='polar')
     ax.spines['polar'].set_visible(False)
 
@@ -928,7 +932,7 @@ def generate_radar_plot_normalized_metrics(model1_scores, model2_scores, model1_
     ax.fill(angles, transformed_scores2, color=MODEL2_COLOR, alpha=0.16, zorder=1)
 
     ax.plot(angles, transformed_scores1, 'o-', color=MODEL1_COLOR, linewidth=1, 
-            label=model1_name, markersize=8, markerfacecolor=MODEL1_COLOR, 
+            label=model1_name, markersize=6, markerfacecolor=MODEL1_COLOR, 
             markeredgecolor=MODEL1_COLOR, zorder=2)
     ax.plot(angles, transformed_scores2, 'o-', color=MODEL2_COLOR, linewidth=3, 
             label=model2_name, markersize=8, markerfacecolor=MODEL2_COLOR, 
@@ -941,9 +945,10 @@ def generate_radar_plot_normalized_metrics(model1_scores, model2_scores, model1_
 
     unique_marker = plt.Line2D([], [], marker='X', color='#03c03c',
                               markerfacecolor='#03c03c', markeredgecolor='#03c03c',
-                              markersize=8, linestyle='None', label='CADS Unique')
+                              markersize=10, linestyle='None', label='CADS Unique')
     handles, labels = ax.get_legend_handles_labels()
     handles.append(unique_marker)
+    handles = handles[1:] + [handles[0]]
 
     ax.set_rlabel_position(0)
     plt.yticks(transformed_circles, 
@@ -1004,9 +1009,9 @@ def generate_radar_plot_normalized_metrics(model1_scores, model2_scores, model1_
     # model legend
     model_legend = ax.legend(handles=handles,
                             loc='center left', 
-                            bbox_to_anchor=(1.1, 0.95),
+                            bbox_to_anchor=(1.1, 0.88),  #TODO: (1.1, 0.80) for including more baselines
                             fontsize=20,
-                            title="Models",
+                            title="Result Sources",
                             title_fontsize=25)
     ax.add_artist(model_legend)
 
@@ -1016,7 +1021,7 @@ def generate_radar_plot_normalized_metrics(model1_scores, model2_scores, model1_
         system_legend = ax.legend(system_patches, 
                                 system_groups.keys(), 
                                 loc='center left', 
-                                bbox_to_anchor=(1.1, 0.62),
+                                bbox_to_anchor=(1.1, 0.62),  #TODO: (1.1, 0.12) for including more baselines
                                 title="Anatomical Systems", 
                                 fontsize=20, 
                                 title_fontsize=25)
@@ -1025,12 +1030,12 @@ def generate_radar_plot_normalized_metrics(model1_scores, model2_scores, model1_
     if highlight_high_scores:
         plt.figtext(0.95, 0.15, 
                    f"* Non-linear scale enhancement above {focus_point:.2f}\n" +
-                   "* For unique targets in CADS, the other model's score is set to 0",
-                   fontsize=12, ha='right', style='italic')
+                   "* For unique targets in CADS, the other result's score is set to 0",
+                   fontsize=14, ha='right', style='italic')
     else:
         plt.figtext(0.95, 0.15, 
-                   "* For unique targets in CADS, the other model's score is set to 0",
-                   fontsize=12, ha='right', style='italic')
+                   "* For unique targets in CADS, the other result's score is set to 0",
+                   fontsize=14, ha='right', style='italic')
 
     plt.tight_layout()
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -1114,7 +1119,7 @@ def generate_radar_plot_distance_metrics(model1_scores, model2_scores, model1_na
     log_circle_positions = log_transform(circle_positions)
 
     fig = plt.figure(figsize=(30, 30))
-    fig.suptitle(title, fontsize=50, y=0.95)
+    # fig.suptitle(title, fontsize=50, y=0.95)
     ax = fig.add_subplot(111, projection='polar')
     ax.spines['polar'].set_visible(False)
 
@@ -1128,7 +1133,7 @@ def generate_radar_plot_distance_metrics(model1_scores, model2_scores, model1_na
     ax.fill(angles, log_scores2, color=MODEL2_COLOR, alpha=0.06, zorder=1)
 
     ax.plot(angles, log_scores1, 'o-', color=MODEL1_COLOR, linewidth=1, 
-            label=model1_name, markersize=8, markerfacecolor=MODEL1_COLOR, 
+            label=model1_name, markersize=6, markerfacecolor=MODEL1_COLOR, 
             markeredgecolor=MODEL1_COLOR, zorder=2)
     ax.plot(angles, log_scores2, 'o-', color=MODEL2_COLOR, linewidth=3, 
             label=model2_name, markersize=8, markerfacecolor=MODEL2_COLOR, 
@@ -1141,9 +1146,10 @@ def generate_radar_plot_distance_metrics(model1_scores, model2_scores, model1_na
 
     unique_marker = plt.Line2D([], [], marker='X', color='#03c03c',
                               markerfacecolor='#03c03c', markeredgecolor='#03c03c',
-                              markersize=8, linestyle='None', label='CADS Unique')
+                              markersize=10, linestyle='None', label='CADS Unique')
     handles, labels = ax.get_legend_handles_labels()
     handles.append(unique_marker)
+    handles = handles[1:] + [handles[0]]
 
     ax.set_rlabel_position(0)
     plt.yticks(log_circle_positions, 
@@ -1182,9 +1188,9 @@ def generate_radar_plot_distance_metrics(model1_scores, model2_scores, model1_na
 
     model_legend = ax.legend(handles=handles,
                             loc='center left', 
-                            bbox_to_anchor=(1.05, 0.95),
+                            bbox_to_anchor=(1.05, 0.93),
                             fontsize=20,
-                            title="Models",
+                            title="Result Sources",
                             title_fontsize=25)
     ax.add_artist(model_legend)
 
@@ -1201,8 +1207,8 @@ def generate_radar_plot_distance_metrics(model1_scores, model2_scores, model1_na
         ax.add_artist(model_legend)
 
     plt.figtext(0.95, 0.15, 
-                "* For unique targets in CADS, the other model's score is set to 1.2 × maximum score for visualization",
-                fontsize=12, ha='right', style='italic')
+                "* For unique targets in CADS, the other result's score is set to 1.2 × maximum score for visualization",
+                fontsize=14, ha='right', style='italic')
 
     plt.tight_layout()
     os.makedirs(os.path.dirname(output_path), exist_ok=True)

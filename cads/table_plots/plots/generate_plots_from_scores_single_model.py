@@ -140,10 +140,10 @@ def collect_scores(analysis_name, grouping_in_out_dist, prefix):
 
 if __name__ == "__main__":
     result_types = [
-    'filtered_unreliable_and_limited_fov',
+    # 'filtered_unreliable_and_limited_fov',
     'filtered_unreliable',
-    'original_GT_but_remove_limited_fov',
-    'scores_final', 
+    # 'original_GT_but_remove_limited_fov',
+    # 'scores_final', 
     ]
     metrics = {
         'dice': {'is_normalized': True},
