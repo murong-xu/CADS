@@ -224,7 +224,7 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', use_cpu=F
         for task_id in task_ids:
             file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
             if preprocess_cads and preprocessing_done:
-                restore_seg_in_orig_format(file_out, metadata_orig, num_threads_preprocessing=num_threads_preprocessing)
+                restore_seg_in_orig_format(file_out, file_out, metadata_orig, num_threads_preprocessing=num_threads_preprocessing)
 
         # Combine all classes into a single segmentation nii file
         if save_all_combined_seg:

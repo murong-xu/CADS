@@ -271,10 +271,10 @@ def preprocess_nifti(file_in, spacing=1.5, num_threads_preprocessing=2):
         return temp_subdir, temp_path, metadata_orig, True
     
 
-def restore_seg_in_orig_format(file_seg, metadata_orig, num_threads_preprocessing=2):
+def restore_seg_in_orig_format(file_seg_in, file_seg_out, metadata_orig, num_threads_preprocessing=2):
     print('Restore the segmentation to original format...')
 
-    seg_preprocessed = nib.load(file_seg)
+    seg_preprocessed = nib.load(file_seg_in)
     orig_spacing = metadata_orig['spacing']
     orig_affine = metadata_orig['affine']
 
@@ -295,7 +295,7 @@ def restore_seg_in_orig_format(file_seg, metadata_orig, num_threads_preprocessin
     seg_restored = nib.Nifti1Image(seg_reoriented.get_fdata().astype(np.uint8), 
                                   orig_affine)
     
-    nib.save(seg_restored, file_seg)
+    nib.save(seg_restored, file_seg_out)
 
 
 def preprocess_nifti_ctrate(raw_img, output_filename, spacing=1.5, num_threads_preprocessing=2):
