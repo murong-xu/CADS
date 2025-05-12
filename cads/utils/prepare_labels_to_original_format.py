@@ -37,8 +37,8 @@ def main():
     if args.start_idx is not None and args.end_idx is not None:
         img_ids = img_ids[args.start_idx:args.end_idx]
     
-    for img_id in img_ids:
-        print('img_id: ', img_id)
+    for i, img_id in enumerate(img_ids):
+        print("Restoring file {}/{}   ".format(i+1, len(img_ids)), img_id)
         original_img_file = os.path.join(original_img_folder, 'images', img_id+'_0000.nii.gz')
         original_img = nib.load(original_img_file)
         original_img_data = original_img.get_fdata()
@@ -61,6 +61,7 @@ def main():
             if not os.path.exists(seg_file_out):
                 os.makedirs(os.path.dirname(seg_file_out), exist_ok=True)
             restore_seg_in_orig_format(seg_file_in, seg_file_out, metadata_orig, num_threads_preprocessing=4)
+    print('end')
 
 if __name__ == "__main__":
     main()
