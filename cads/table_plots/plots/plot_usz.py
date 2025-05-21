@@ -49,7 +49,7 @@ from adjustText import adjust_text
 
 random.seed(42)
 
-plt.figure(figsize=(16, 16))
+plt.figure(figsize=(20, 16))
 
 shared_organs = []
 unique_organs = []
@@ -90,13 +90,13 @@ for organ in shared_organs:
     size = abs(diff) * 100 + 500  # increase the size of the markers
     
     plt.scatter(x, y, s=size, c=[organ_colors[organ]], alpha=0.7)
-    texts.append(plt.text(x, y, organ, fontsize=12))  # increase font size
+    texts.append(plt.text(x, y, organ, fontsize=18))  # increase font size
 
 # unique structures
 for organ in unique_organs:
     y = dice_data[organ]['OMASeg']
     plt.scatter(0, y, marker='D', c=[organ_colors[organ]], s=300, alpha=0.7)
-    texts.append(plt.text(0, y, organ, fontsize=12))
+    texts.append(plt.text(0, y, organ, fontsize=20))
 
 # adjust text positions
 adjust_text(texts,
@@ -109,10 +109,10 @@ adjust_text(texts,
 
 plt.xlim(-5, 105)
 plt.ylim(25, 105)
-plt.xticks(fontsize=14)
-plt.yticks(fontsize=14)
-plt.xlabel('TotalSeg Dice Score (%) (0 = Not Supported)', fontsize=16)
-plt.ylabel('CADS Dice Score (%)', fontsize=16)
+plt.xticks(fontsize=18)
+plt.yticks(fontsize=18)
+plt.xlabel('TotalSeg Dice Score (%) (0 = Not Supported)', fontsize=24)
+plt.ylabel('CADS Dice Score (%)', fontsize=24)
 
 legend_shared = plt.scatter([], [], s=600, c='gray', alpha=1, label='Mutual Structures')
 legend_unique = plt.scatter([], [], marker='D', s=400, c='gray', alpha=1, label='Unique Structures')
@@ -120,7 +120,7 @@ legend_unique = plt.scatter([], [], marker='D', s=400, c='gray', alpha=1, label=
 plt.legend(handles=[green_patch, red_patch, legend_shared, legend_unique],
           bbox_to_anchor=(0.98, 0.02),
           loc='lower right',
-          fontsize=13,
+          fontsize=22,
           framealpha=0.8,
           markerscale=0.5,
           labelspacing=0.8,
@@ -132,4 +132,5 @@ plt.grid(True, linestyle='--', alpha=0.3)
 plt.tight_layout()
 
 plt.savefig('/mnt/hdda/murong/22k/plots/result_c_usz_scatter.png', dpi=300, bbox_inches='tight')
+# plt.savefig('/mnt/hdda/murong/22k/plots/result_c_usz_scatter.eps', bbox_inches='tight')
 plt.show()

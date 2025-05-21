@@ -1,7 +1,7 @@
 dice = {
-    'VISCERAL Gold Corpus': {'OMASeg': 83.66, 'TotalSeg': 83.39},
-    'VISCERAL Gold Corpus-Extra': {'OMASeg': 75.95, 'TotalSeg': 66.94},
-    'VISCERAL Silver Corpus': {'OMASeg': 72.10, 'TotalSeg': 70.94},
+    'VISCERAL GC': {'OMASeg': 83.66, 'TotalSeg': 83.39},
+    'VISCERAL GC-Extra': {'OMASeg': 75.95, 'TotalSeg': 66.94},
+    'VISCERAL SC': {'OMASeg': 72.10, 'TotalSeg': 70.94},
     'KiTS': {'OMASeg': 91.31, 'TotalSeg': 88.36},
     'LiTS': {'OMASeg': 96.08, 'TotalSeg': 95.89},
     'BTCV-Abdomen': {'OMASeg': 83.84, 'TotalSeg': 85.15},
@@ -20,9 +20,9 @@ dice = {
 }
 
 hd95 = {
-    'VISCERAL Gold Corpus': {'OMASeg': 7.98, 'TotalSeg': 8.12},
-    'VISCERAL Gold Corpus-Extra': {'OMASeg': 8.68, 'TotalSeg': 18.43},
-    'VISCERAL Silver Corpus': {'OMASeg': 29.65, 'TotalSeg': 30.12},
+    'VISCERAL GC': {'OMASeg': 7.98, 'TotalSeg': 8.12},
+    'VISCERAL GC-Extra': {'OMASeg': 8.68, 'TotalSeg': 18.43},
+    'VISCERAL SC': {'OMASeg': 29.65, 'TotalSeg': 30.12},
     'KiTS': {'OMASeg': 7.36, 'TotalSeg': 7.65},
     'LiTS': {'OMASeg': 4.05, 'TotalSeg': 4.46},
     'BTCV-Abdomen': {'OMASeg': 4.06, 'TotalSeg': 5.55},
@@ -61,7 +61,11 @@ totalseg_dice = [dice[d]['TotalSeg'] for d in datasets]
 omaseg_hd95 = [hd95[d]['OMASeg'] for d in datasets]
 totalseg_hd95 = [hd95[d]['TotalSeg'] for d in datasets]
 
-fig, ax1 = plt.subplots(figsize=(15, 10))
+group_spacing_factor = 1.5
+fig_height_original = 12
+fig_height_new = fig_height_original * group_spacing_factor
+
+fig, ax1 = plt.subplots(figsize=(23, fig_height_new))
 
 y_pos = np.arange(len(datasets))
 bar_width = 0.35
@@ -83,7 +87,7 @@ for idx, y in enumerate(y_pos):
             f'{sign}{diff:.2f}%', 
             color=color,
             va='center',
-            fontsize=10,
+            fontsize=22,
             fontweight='bold')
     
     ax1.plot([totalseg_dice[idx], omaseg_dice[idx]], 
@@ -96,24 +100,27 @@ for idx, y in enumerate(y_pos):
 # hd95
 ax2 = ax1.twiny()
 
-ax2.plot(omaseg_hd95, y_pos, 'o-', color=COLOR_CADS_POINT, label='CADS HD95', markersize=8)
-ax2.plot(totalseg_hd95, y_pos, 'o--', color=COLOR_TOTALSEG_POINT, label='TotalSeg HD95', markersize=8)
+ax2.plot(omaseg_hd95, y_pos, marker='X', linestyle='-', color=COLOR_CADS_POINT, label='CADS HD95', markersize=12, alpha=0.7) # Changed linestyle
+ax2.plot(totalseg_hd95, y_pos, marker='o', linestyle='--', color=COLOR_TOTALSEG_POINT, label='TotalSeg HD95', markersize=12, alpha=0.7) # Changed linestyle
 
 ax1.set_yticks(y_pos)
 ax1.set_yticklabels(datasets)
+ax1.tick_params(axis='x', which='major', labelsize=18) # Set the font size for major x-axis tick labels
+ax1.tick_params(axis='y', which='major', labelsize=22) # Set the font size for major y-axis tick labels
 
 ax1.set_xlim(40, 102)
-ax1.set_xlabel('Dice Score (%)', fontsize=14)
+ax1.set_xlabel('Dice Score (%)', fontsize=28)
 ax2.set_xlim(0, 100)
-ax2.set_xlabel('HD95 (mm)', fontsize=14)
+ax2.set_xlabel('HD95 (mm)', fontsize=28)
 
 ax1.grid(True, linestyle='--', alpha=0.3)
 
 lines1, labels1 = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
-ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
+ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right', fontsize=19, markerscale=0.7) # Adjusted location, fontsize, markerscale
 
 plt.tight_layout()
 
-plt.savefig('/mnt/hdda/murong/22k/plots/result_a_18_challenges_comparison.png', dpi=300, bbox_inches='tight')
+plt.savefig('/mnt/hdda/murong/22k/plots/result_a_18_challenges_comparison.png', dpi=200, bbox_inches='tight')
+# plt.savefig('/mnt/hdda/murong/22k/plots/result_a_18_challenges_comparison.eps', bbox_inches='tight')
 plt.show()

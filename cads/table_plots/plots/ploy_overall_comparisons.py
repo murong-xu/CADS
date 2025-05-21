@@ -35,7 +35,7 @@ COLOR_WORSE = '#d14536'
 import matplotlib.pyplot as plt
 import numpy as np
 
-categories = ['Primary Test Data', 'Secondary Test Data', 'Full Test Data', 'All 167 Targets']
+categories = ['Primary\nTest Data', 'Secondary\nTest Data', 'Full\nTest Data', 'All\n167 Targets']
 bar_width = 0.35
 
 # Dice scores
@@ -75,46 +75,52 @@ x = np.arange(len(categories))
 
 # Dice bars
 # TotalSeg bars
-totalseg_bars = ax1.bar(x[:3] - bar_width/2, totalseg_dice[:3], bar_width, 
+totalseg_bars = ax1.bar(x[:3] - bar_width/2, totalseg_dice[:3], bar_width,
                        label='TotalSeg Dice', color=COLOR_TOTALSEG, alpha=1)
 
 # CADS bars
-omaseg_bars_first = ax1.bar(x[:3] + bar_width/2, omaseg_dice[:3], bar_width, 
+omaseg_bars_first = ax1.bar(x[:3] + bar_width/2, omaseg_dice[:3], bar_width,
                            label='CADS Dice', color=COLOR_CADS, alpha=1)
-omaseg_bars_last = ax1.bar(x[3], omaseg_dice[3], bar_width, 
+omaseg_bars_last = ax1.bar(x[3], omaseg_dice[3], bar_width,
                           color=COLOR_CADS, alpha=1)
-
 # hd95
 # TotalSeg
-ax2.plot(x[:3], totalseg_hd95[:3], 'o--', color=COLOR_TOTALSEG_POINT, 
-         label='TotalSeg HD95', alpha=0.7, markersize=6)
+totalseg_hd95_x = x[:3] - bar_width/2
+ax2.plot(totalseg_hd95_x, totalseg_hd95[:3], marker='o', linestyle='None', color=COLOR_TOTALSEG_POINT,
+         label='TotalSeg HD95', alpha=0.7, markersize=20)
 
 # CADS
-ax2.plot(x, omaseg_hd95, 'o-', color=COLOR_CADS_POINT, 
-         label='CADS HD95', alpha=0.7, markersize=6)
+# Adjust x-coordinates to center markers over CADS bars
+omaseg_hd95_x = np.array([x[i] + bar_width/2 for i in range(3)] + [x[3]])
+ax2.plot(omaseg_hd95_x, omaseg_hd95, marker='X', linestyle='None', color=COLOR_CADS_POINT,
+         label='CADS HD95', alpha=0.7, markersize=20)
 
 # add text labels
 # TotalSeg bars
 for i in range(3):
     if totalseg_dice[i] is not None:
         ax1.text(x[i] - bar_width/2, totalseg_dice[i], f'{totalseg_dice[i]:.1f}',
-                ha='center', va='bottom')
+                ha='center', va='bottom', fontsize=16)
 
 # CADS bars
 for i in range(3):
     ax1.text(x[i] + bar_width/2, omaseg_dice[i], f'{omaseg_dice[i]:.1f}',
-            ha='center', va='bottom')
+            ha='center', va='bottom', fontsize=16, color=COLOR_BETTER, fontweight='bold')
 
 # CADS last bar (All Targets)
 ax1.text(x[3], omaseg_dice[3], f'{omaseg_dice[3]:.1f}',
-        ha='center', va='bottom')
+        ha='center', va='bottom', fontsize=16, color=COLOR_BETTER, fontweight='bold')
 
-ax1.set_ylabel('Dice Score (%)', fontsize=12)
-ax2.set_ylabel('HD95 (mm)', fontsize=12)
+ax1.set_ylabel('Dice Score (%)', fontsize=18)
+ax2.set_ylabel('HD95 (mm)', fontsize=18)
 ax1.set_ylim(75, 95)
 ax2.set_ylim(0, 12)
 
-plt.xticks(x, categories)
+ax1.set_xticks(x) # Ensure the tick positions are set
+ax1.set_xticklabels(categories) # Ensure the labels are set
+ax1.tick_params(axis='x', which='major', labelsize=16) # Set the font size for major x-axis tick labels
+
+ax1.grid(True, linestyle='--', alpha=0.3)
 ax1.grid(True, linestyle='--', alpha=0.3)
 
 lines1, labels1 = ax1.get_legend_handles_labels()
@@ -122,11 +128,11 @@ lines2, labels2 = ax2.get_legend_handles_labels()
 new_lines = [lines1[1], lines1[0], lines2[1], lines2[0]]
 new_labels = [labels1[1], labels1[0], labels2[1], labels2[0]]
 
-ax1.legend(new_lines, new_labels, loc='upper right')
+ax1.legend(new_lines, new_labels, loc='upper right', markerscale=0.5)
 
 # plt.title('Part B (Enhanced): Overall Performance with Heatmap & Extra Targets', pad=20)
 
 plt.tight_layout()
 
-plt.savefig('/mnt/hdda/murong/22k/plots/result_b_overall_comparison.png', dpi=300, bbox_inches='tight')
+plt.savefig('/mnt/hdda/murong/22k/plots/result_b_overall_comparison.eps', bbox_inches='tight')
 plt.show()
