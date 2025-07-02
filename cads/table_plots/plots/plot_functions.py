@@ -530,7 +530,8 @@ def generate_box_plot(results_dict, metric_name='DSC', output_path=None, title="
 
     if output_path:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        plt.savefig(output_path, bbox_inches='tight', dpi=300)
+        # plt.savefig(output_path, bbox_inches='tight', dpi=500)
+        plt.savefig(output_path, format='pdf', dpi=500, bbox_inches='tight', pad_inches=0.5)
     
     return ax
 
@@ -645,8 +646,8 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
     ax_legend.legend(handles, labels,
                     title='Anatomical Systems',
                     loc='upper left',
-                    fontsize=10,
-                    title_fontsize=12)
+                    fontsize=14,
+                    title_fontsize=16)
     
     # calculate ststistics (median, mean shown in the columns)
     ordered_organs = df['Organ'].unique() 
@@ -662,7 +663,7 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
     stats = pd.DataFrame(stats_data).set_index('Organ')
     
     ax_main.set_yticks(range(len(ordered_organs)))
-    ax_main.set_yticklabels(ordered_organs, fontsize=10, ha='right')
+    ax_main.set_yticklabels(ordered_organs, fontsize=12, ha='right')
     ax_main.tick_params(axis='y', pad=5)
     
     right_edge = x_max
@@ -681,11 +682,11 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
 
         ax_main.text(right_edge + text_begin, -0.8,
             'median',
-            va='center', ha='center', fontsize=10,
+            va='center', ha='center', fontsize=12,
             fontweight='bold', color='black')
         ax_main.text(right_edge + text_begin + text_spacing, -0.8,
                 'mean±std',
-                va='center', ha='center', fontsize=10,
+                va='center', ha='center', fontsize=12,
                 fontweight='bold', color='black')
         
         for i, (organ, _) in enumerate(stats.iterrows()):
@@ -702,11 +703,11 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
             ax_main.text(right_edge + text_begin, i,
                     median_str,
                     va='center', ha='center',
-                    fontsize=8, color='black', alpha=0.7)
+                    fontsize=12, color='black', alpha=0.7)
             ax_main.text(right_edge + text_begin + text_spacing, i,
                     mean_std_str,
                     va='center', ha='center',
-                    fontsize=8, color='black', alpha=0.7)
+                    fontsize=12, color='black', alpha=0.7)
     else:
         # distance metrics
         text_begin = 0.01 * x_range
@@ -742,11 +743,11 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
 
         ax_main.text(right_edge + text_begin, -0.8,
             'median',
-            va='center', ha='center', fontsize=10,
+            va='center', ha='center', fontsize=12,
             fontweight='bold', color='black')
         ax_main.text(right_edge + text_begin + text_spacing, -0.8,
                 'mean±std',
-                va='center', ha='center', fontsize=10,
+                va='center', ha='center', fontsize=12,
                 fontweight='bold', color='black')
         
         for i, (organ, _) in enumerate(stats.iterrows()):
@@ -763,11 +764,11 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
             ax_main.text(right_edge + text_begin, i,
                     median_str,
                     va='center', ha='center',
-                    fontsize=8, color='black', alpha=0.7)
+                    fontsize=12, color='black', alpha=0.7)
             ax_main.text(right_edge + text_begin + text_spacing, i,
                     mean_std_str,
                     va='center', ha='center',
-                    fontsize=8, color='black', alpha=0.7)
+                    fontsize=12, color='black', alpha=0.7)
     
     prev_system = None
     for i, (idx, row) in enumerate(df.groupby('Organ').first().iterrows()):
@@ -776,7 +777,8 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
             ax_sets.axhline(y=i-0.5, color='gray', linestyle='--', alpha=0.3)
         prev_system = row['System']
     
-    ax_main.set_xlabel(metric_name, fontsize=16)
+    ax_main.set_xlabel(metric_name, fontsize=20, fontweight='bold')
+    ax_main.set_ylabel('Organ', fontsize=20, fontweight='bold')
     # ax_main.set_title(title, pad=20, fontsize=14, fontweight='bold')
     ax_main.grid(True, axis='x', linestyle='--', alpha=0.7)
     ax_main.set_xlim(x_min, right_edge + text_begin + text_spacing + final_margin)
@@ -836,7 +838,8 @@ def generate_box_plot_with_testdata_sources(results_dict, test_datasets_sources_
     ax_sets.set_ylim(ylim)
     
     if output_path:
-        plt.savefig(output_path, bbox_inches='tight', dpi=300)
+        # plt.savefig(output_path, bbox_inches='tight', dpi=500)
+        plt.savefig(output_path, format='pdf', dpi=500, bbox_inches='tight', pad_inches=0.5)
     
     return ax_main, ax_sets, ax_legend
 
@@ -1212,5 +1215,6 @@ def generate_radar_plot_distance_metrics(model1_scores, model2_scores, model1_na
 
     plt.tight_layout()
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', pad_inches=0.5)
+    plt.savefig(output_path, format='pdf', dpi=500, bbox_inches='tight', pad_inches=0.5)
+    # plt.savefig(output_path, dpi=500, bbox_inches='tight', pad_inches=0.5)
     plt.close()

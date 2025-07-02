@@ -13,8 +13,8 @@ def generate_metric_cell(row, model_name, show_percentage, better_model=None):
                 mean = float(mean_str)
                 std = float(std_str)
                 if as_percentage:
-                    return f"{(mean*100):.2f}±{(std*100):.2f}"
-                return f"{mean:.2f}±{std:.2f}"
+                    return f"{(mean*100):.2f}±{{\\scriptsize {(std*100):.2f}}}"
+                return f"{mean:.2f}±{{\\scriptsize {std:.2f}}}"
             except (ValueError, TypeError):
                 return value
         try:
@@ -65,9 +65,9 @@ def generate_organ_row(organ, metric_1_row, metric_2_row, metric_data_1_dict, me
     better_model_2 = metric_2_row.get('all Better Model', None)
 
     # Generate cells for each model and metric
-    omaseg_1_values = generate_metric_cell(metric_1_row, 'CADS', show_percentage_1, better_model_1)
+    omaseg_1_values = generate_metric_cell(metric_1_row, 'OMASeg', show_percentage_1, better_model_1)
     totalseg_1_values = generate_metric_cell(metric_1_row, 'TotalSeg', show_percentage_1, better_model_1)
-    omaseg_2_values = generate_metric_cell(metric_2_row, 'CADS', show_percentage_2, better_model_2)
+    omaseg_2_values = generate_metric_cell(metric_2_row, 'OMASeg', show_percentage_2, better_model_2)
     totalseg_2_values = generate_metric_cell(metric_2_row, 'TotalSeg', show_percentage_2, better_model_2)
     
     # Generate the three rows
@@ -114,7 +114,7 @@ def generate_latex_table(metric_data_1_dict, metric_data_2_dict, output_path, sy
         "\\definecolor{LightGray}{rgb}{0.95, 0.95, 0.95}",
         "\\definecolor{LightBlue}{rgb}{0.95, 0.95, 1.0}",
         "{\\small",
-        "\\begin{longtable}{>{\centering\\arraybackslash}p{2.3cm} c c c c}",
+        "\\begin{longtable}{>{\centering\\arraybackslash}p{2.3cm} c c|c c}",
         "\\caption{Comparison of CADS and TotalSeg performance}",
         "\\label{tab:model_comparison} \\\\",
         "\\toprule",

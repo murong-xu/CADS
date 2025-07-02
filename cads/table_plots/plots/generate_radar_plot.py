@@ -88,7 +88,7 @@ if __name__ == "__main__":
                         model1_name='TotalSegmentator',
                         model2_name='CADS',
                         baseline_scores=baseline_scores,
-                        output_path=f"/mnt/hdda/murong/22k/plots/{result_type}/per_structure/radar_plot_all_{metric_avg_type}_{metric}.png",
+                        output_path=f"/mnt/hdda/murong/22k/plots/{result_type}/per_structure/radar_plot_all_{metric_avg_type}_{metric}.pdf",
                         title=f"Structure-wise {metric_avg_type.capitalize()} {metric.capitalize()} Score Comparison (Full Dataset)",
                         highlight_high_scores=PLOT_CONFIG[metric]['highlight_high_scores'],
                         focus_point=PLOT_CONFIG[metric]['focus_point'],
@@ -101,7 +101,7 @@ if __name__ == "__main__":
                         model2_scores=omaseg_scores,
                         model1_name='TotalSegmentator',
                         model2_name='CADS',
-                        output_path=f"/mnt/hdda/murong/22k/plots/{result_type}/per_structure/radar_plot_all_{metric_avg_type}_{metric}.png",
+                        output_path=f"/mnt/hdda/murong/22k/plots/{result_type}/per_structure/radar_plot_all_{metric_avg_type}_{metric}.pdf",
                         title=f"Structure-wise {metric_avg_type.capitalize()} {metric.capitalize()} Score Comparison (Full Dataset)",
                         system_groups=anatomical_systems
                     )

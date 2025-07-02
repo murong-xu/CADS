@@ -161,18 +161,25 @@ if __name__ == "__main__":
             experiments_dicts, test_datasets_sources_dict = collect_scores(result_type, grouping_in_out_dist, metric)
 
             # Step 2) generate plot
-            metric_name = metric.capitalize().replace('_', ' ')
+            if metric == 'dice':
+                metric_name = 'Dice'
+            elif metric == 'hd':
+                metric_name = 'Hausdorff Distance'
+            elif metric == 'hd95':
+                metric_name = 'Hausdorff Distance 95th Percentile'
+            elif metric == 'normalized_distance':
+                metric_name = 'Normalized Surface Dice'
 
-            plot_output_path=f'/mnt/hdda/murong/22k/plots/{result_type}/per_structure/omaseg-only/omaseg-only_box_plot_{metric}.png'
-            generate_box_plot(experiments_dicts['OMASeg'][plot_dist], 
-                            metric_name=metric_name, 
-                            output_path=plot_output_path,
-                            title=f'Structure-wise {metric_name} Score Distribution',
-                            anatomical_systems=anatomical_systems,
-                            is_normalized=metrics[metric]['is_normalized']
-                            )
+            # plot_output_path=f'/mnt/hdda/murong/22k/plots/{result_type}/per_structure/omaseg-only/omaseg-only_box_plot_{metric}.pdf'
+            # generate_box_plot(experiments_dicts['OMASeg'][plot_dist], 
+            #                 metric_name=metric_name, 
+            #                 output_path=plot_output_path,
+            #                 title=f'Structure-wise {metric_name} Score Distribution',
+            #                 anatomical_systems=anatomical_systems,
+            #                 is_normalized=metrics[metric]['is_normalized']
+            #                 )
             
-            plot_output_path=f'/mnt/hdda/murong/22k/plots/{result_type}/per_structure/omaseg-only/omaseg-only_box_plot_{metric}_with_test_sources.png'
+            plot_output_path=f'/mnt/hdda/murong/22k/plots/{result_type}/per_structure/omaseg-only/omaseg-only_box_plot_{metric}_with_test_sources.pdf'
             generate_box_plot_with_testdata_sources(experiments_dicts['OMASeg'][plot_dist],
                                                     test_datasets_sources_dict['OMASeg'][plot_dist],
                                                     metric_name=metric_name,
