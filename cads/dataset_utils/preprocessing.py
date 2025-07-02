@@ -255,9 +255,9 @@ def preprocess_nifti(file_in, spacing=1.5, num_threads_preprocessing=2):
 
         # Create temp file path and save
         temp_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        temp_subdir = os.path.join(temp_dir, 'cads', 'temp_results')
-        os.makedirs(temp_subdir, exist_ok=True)
         basename = os.path.basename(file_in).split('.nii.gz')[0]
+        temp_subdir = os.path.join(temp_dir, 'cads', 'temp_results', basename)
+        os.makedirs(temp_subdir, exist_ok=True)
         temp_path = os.path.join(temp_subdir, f"{basename}_preprocessed.nii.gz")
         nib.save(img_removed, temp_path)
 

@@ -69,8 +69,11 @@ def filter_connected_components_TPTBox(
     None
     """
     arr = self.get_seg_array()
-    nii = self.get_largest_k_segmentation_connected_components(
-        None, labels, connectivity=connectivity, return_original_labels=False)
+    try:
+        nii = self.get_largest_k_segmentation_connected_components(
+            None, labels, connectivity=connectivity, return_original_labels=False)
+    except (ValueError, AssertionError):  # TPTBox may throw error for empty class (here we skip it!), AssertionError("bbox_nd: img is empty, cannot calculate a bbox")
+        return self if inplace else self.copy() 
     idxs = nii.unique()
     for k, idx in enumerate(idxs, start=1):
         msk = nii.extract_label(idx)
