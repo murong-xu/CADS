@@ -2,9 +2,9 @@ from setuptools import setup, find_packages
 import os
 
 setup(name='CADS',
-        version='0.0.1',
-        description='Robust segmentation of 167 classes in CT images.',
-        long_description="See Readme.md on github for more details.",
+        version='1.0.0',
+        description='Comprehensive anatomical segmentation model for 167 structures in Computed Tomography, spanning head to knee regions.',
+        long_description='For detailed documentation, model weights, and source code, visit: https://github.com/murong-xu/CADS',
         url='https://github.com/murong-xu/CADS',
         author='Murong Xu',
         author_email='murong.xu@uzh.ch',
