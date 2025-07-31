@@ -15,7 +15,7 @@ setup(name='CADS',
             'cads': 'cads', 
         },
         install_requires=[
-            'torch>=2.0.0',
+            'torch>=2.1.2',
             'numpy',
             'SimpleITK',
             'nibabel>=2.3.0',
