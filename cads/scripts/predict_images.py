@@ -2,7 +2,7 @@ import argparse
 import os
 
 from cads.utils.inference import predict
-from cads.utils.libs import setup_nnunet_env
+from cads.utils.libs import get_model_weights_dir, setup_nnunet_env, check_or_download_model_weights
 
 def check_input_task(value):
     valid_numbers = {551, 552, 553, 554, 555, 556, 557, 558, 559}
@@ -31,9 +31,6 @@ def main():
     parser.add_argument("-out", metavar="output_files_directory", dest="output_folder",
                         help="Output directory for segmentation masks", required=True)
 
-    parser.add_argument("-model", metavar="models_directory",
-                        dest="model_folder", help="Directory of nnUNet models", required=True)
-
     parser.add_argument("-task", dest='task_id', type=check_input_task,
                         help="Input either 'all' or one of the task ids[551, 552, 553, 554, 555, 556, 557, 558, 559]")
                         
@@ -43,12 +40,14 @@ def main():
         default=False,
         help='Use CPU for processing (default: False, use GPU)'
     )
-    
-    parser.add_argument('--preprocessing', action='store_true',
-                        help='Set this flag to enable CADS preprocessing (reorient RAS, resampling 1.5, remove rotation and translation)', default=False)
-    
-    parser.add_argument('--postprocessing', action='store_true',
-                        help='Set this flag to enable CADS postprocessing', default=False)
+
+    parser.add_argument('--no-preprocessing', action='store_false',
+                    dest='preprocessing',
+                    help='Disable CADS preprocessing (reorient RAS, resampling 1.5, remove rotation and translation)')
+
+    parser.add_argument('--no-postprocessing', action='store_false',
+                    dest='postprocessing',
+                    help='Disable CADS postprocessing')
 
     parser.add_argument("-np", "--nr_thr_preprocess", type=int,
                         help="Nr of threads for preprocessing", default=4)
@@ -70,8 +69,14 @@ def main():
     task_ids = args.task_id
 
     # parepare local model weights
-    model_folder = args.model_folder
+    model_folder = get_model_weights_dir()
     setup_nnunet_env()
+    for task_id in task_ids:
+        check_or_download_model_weights(task_id)
+    if any(task in task_ids for task in [557, 558]) and 553 not in task_ids:
+        check_or_download_model_weights(553)
+        if 558 in task_ids and 552 not in task_ids:
+            check_or_download_model_weights(552)
 
     task_ids.sort()
     predict(input_images, output_seg_folder, model_folder, task_ids, folds=folds, use_cpu=args.cpu,

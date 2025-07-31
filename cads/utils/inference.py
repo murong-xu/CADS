@@ -137,7 +137,7 @@ def save_targets_to_nifti(save_separate_targets, output_targets_dir, affine, lab
                   basename=patient_id, original_affine=affine), targets, num_cpus=nr_threads_saving)
 
 
-def predict(files_in, folder_out, model_folder, task_ids, folds='all', use_cpu=False, preprocess_cads=False, postprocess_cads=False, save_all_combined_seg=True, snapshot=True, save_separate_targets=False, num_threads_preprocessing=4, nr_threads_saving=6, verbose=False):
+def predict(files_in, folder_out, model_folder, task_ids, folds='all', use_cpu=False, preprocess_cads=True, postprocess_cads=True, save_all_combined_seg=False, snapshot=False, save_separate_targets=False, num_threads_preprocessing=4, nr_threads_saving=6, verbose=False):
     """
     Loop images and use nnUNetv2 models to predict. 
     """

@@ -46,10 +46,9 @@ def get_model_weights_dir():
     if "CADS_WEIGHTS_PATH" in os.environ:
         model_dir = Path(os.environ["CADS_WEIGHTS_PATH"])
     else:
-        home_path = Path("/tmp") if str(Path.home()) == "/" else Path.home()  # PosixPath('/Users/murong')
-        cads_dir = home_path / ".cads"
-        model_dir = cads_dir / "nnunet" / "results"
-        model_dir.parent.mkdir(parents=True, exist_ok=True)
+        codebase_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        model_dir = Path(codebase_dir) / 'cads' / 'model_weights'
+    model_dir.mkdir(parents=True, exist_ok=True)
     return str(model_dir)
 
 def setup_nnunet_env():
@@ -62,17 +61,17 @@ def setup_nnunet_env():
 def check_or_download_model_weights(task_id):
     weights_dir = Path(get_model_weights_dir())
     weights_dir.mkdir(parents=True, exist_ok=True)
-    #TODO: 
+    # CADS-model v1.0.0
     weights_info = {
-        551: ("Dataset551_Totalseg251", ""),
-        552: ("Dataset552_Totalseg252", ""),
-        553: {"Dataset553_Totalseg253", ""},
-        554: {"Dataset554_Totalseg254", ""},
-        555: {"Dataset555_Totalseg255", ""},
-        556: {"Dataset556_GC256", ""},
-        557: {"Dataset557_Brain257", ""},
-        558: {"Dataset558_OAR258", ""},
-        559: {"Dataset559_SAROS259", ""},
+        551: ("Dataset551_Totalseg251", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset551_Totalseg251.zip"),
+        552: ("Dataset552_Totalseg252", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset552_Totalseg252.zip"),
+        553: ("Dataset553_Totalseg253", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset553_Totalseg253.zip"),
+        554: ("Dataset554_Totalseg254", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset554_Totalseg254.zip"),
+        555: ("Dataset555_Totalseg255", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset555_Totalseg255.zip"),
+        556: ("Dataset556_GC256", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset556_GC256.zip"),
+        557: ("Dataset557_Brain257", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset557_Brain257.zip"),
+        558: ("Dataset558_OAR258", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset558_OAR258.zip"),
+        559: ("Dataset559_SAROS259", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset559_Saros259.zip"),
     }
     
     folder_name, url = weights_info[task_id]
@@ -97,7 +96,9 @@ def check_or_download_model_weights(task_id):
 
             print("Download finished. Extracting...")
             with zipfile.ZipFile(tempfile, 'r') as zip_f:
-                zip_f.extractall(weights_dir)
+                for member in zip_f.namelist():
+                    if not member.startswith('__MACOSX') and not os.path.basename(member).startswith('._'):
+                        zip_f.extract(member, weights_dir)
             print(f"Model weights extracted to {weights_path}")
             
         except requests.exceptions.RequestException as e:

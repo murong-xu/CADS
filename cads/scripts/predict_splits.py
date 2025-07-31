@@ -5,6 +5,7 @@ import os
 from cads.utils.inference import predict
 from cads.dataset_utils.select_files import select_imgs
 from cads.dataset_utils.bodyparts_labelmaps import labelmap_all_structure
+from cads.utils.libs import get_model_weights_dir, setup_nnunet_env, check_or_download_model_weights
 
 def check_input_task(value):
     valid_numbers = {551, 552, 553, 554, 555, 556, 557, 558, 559}
@@ -53,26 +54,16 @@ def main():
     parser.add_argument("-split", "--split", type=int,
                         help="val=2, test=0, train=1", required=False)
 
-    parser.add_argument("-model", metavar="models_directory",
-                        dest="model_folder", help="Directory of nnUNet models", required=True)
-
     parser.add_argument("-task", dest='task_id', type=check_input_task,
                         help="Input either 'all' or a subset of [551, 552, 553, 554, 555, 556, 557, 558, 559]")
     
-    parser.add_argument('--preprocessing', action='store_true',
-                        help='Set this flag to enable CADS preprocessing (reorient RAS, resampling 1.5, remove rotation and translation)', default=False)
-    
-    parser.add_argument('--postprocessing', action='store_true',
-                        help='Set this flag to enable CADS postprocessing', default=False)
+    parser.add_argument('--no-preprocessing', action='store_false',
+                    dest='preprocessing',
+                    help='Disable CADS preprocessing (reorient RAS, resampling 1.5, remove rotation and translation)')
 
-    parser.add_argument("--save_all_combined_seg", action="store_true",
-                        help="Save one multilabel segmentation file for all classes", default=False)
-
-    parser.add_argument("--snapshot", action="store_true",
-                        help="Generate snapshot.png overlay of segmentations on input image", default=False)
-
-    parser.add_argument("-save_separate_targets", dest='save_targets', type=check_input_targets,
-                        help="Input 'False', 'all', or a subset of valid structures in labelmap_all_structure")
+    parser.add_argument('--no-postprocessing', action='store_false',
+                    dest='postprocessing',
+                    help='Disable CADS postprocessing')
 
     parser.add_argument("-np", "--nr_thr_preprocess", type=int,
                         help="Nr of threads for preprocessing", default=1)
@@ -98,9 +89,20 @@ def main():
             args.input_folder) for filename in filenames if filename.endswith(".nii.gz")]
     test_images.sort()
 
-    predict(test_images, args.output_folder, args.model_folder, args.task_id, folds=folds, use_cpu=False,
+    # parepare local model weights
+    task_ids = args.task_id
+    model_folder = get_model_weights_dir()
+    setup_nnunet_env()
+    for task_id in task_ids:
+        check_or_download_model_weights(task_id)
+    if any(task in task_ids for task in [557, 558]) and 553 not in task_ids:
+        check_or_download_model_weights(553)
+        if 558 in task_ids and 552 not in task_ids:
+            check_or_download_model_weights(552)
+
+    predict(test_images, args.output_folder, model_folder, args.task_id, folds=folds, use_cpu=False,
             preprocess_cads=args.preprocessing, postprocess_cads = args.postprocessing, 
-            save_all_combined_seg=args.save_all_combined_seg, snapshot=args.snapshot, save_separate_targets=args.save_targets,
+            save_all_combined_seg=False, snapshot=False, save_separate_targets=False,
             num_threads_preprocessing=args.nr_thr_preprocess, nr_threads_saving=args.nr_thr_saving, verbose=args.verbose)
 
 

@@ -53,11 +53,13 @@ def main():
         help='Use CPU for processing (default: False, use GPU)'
     )
     
-    parser.add_argument('--preprocessing', action='store_true',
-                        help='Set this flag to enable CADS preprocessing (reorient RAS, resampling 1.5, remove rotation and translation)', default=False)
-    
-    parser.add_argument('--postprocessing', action='store_true',
-                        help='Set this flag to enable CADS postprocessing', default=False)
+    parser.add_argument('--no-preprocessing', action='store_false',
+                    dest='preprocessing',
+                    help='Disable CADS preprocessing (reorient RAS, resampling 1.5, remove rotation and translation)')
+
+    parser.add_argument('--no-postprocessing', action='store_false',
+                    dest='postprocessing',
+                    help='Disable CADS postprocessing')
 
     parser.add_argument("-np", "--nr_thr_preprocess", type=int,
                         help="Nr of threads for preprocessing", default=1)
