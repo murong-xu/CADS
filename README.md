@@ -81,7 +81,7 @@ python cads/scripts/predict_images.py \
 ```
 
 ## Target Structures in Each Task
-Each task ID (model 551-559) represents a specific anatomical group. For detailed labelmaps please refer to [bodyparts_labelmaps.py](cads/dataset_utils/bodyparts_labelmaps.py).
+Each task ID (model 551-559) represents a specific anatomical group. For detailed indexing please refer to [model labelmap](resources/info/labelmap.md).
 
 **Task 551: Major abdominal organs, primary thoracic organs (lungs), and major abdominal vasculature**
 Spleen, Kidney R/L, Gallbladder, Liver, Stomach, Aorta, Inferior vena cava, Portal and splenic veins, Pancreas, Adrenal glands R/L, Upper/Lower lobes of left lung, Upper/Middle/Lower lobes of right lung.
