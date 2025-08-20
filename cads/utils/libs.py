@@ -1,10 +1,11 @@
-import os
 import contextlib
-import sys
-import shutil
-import zipfile
 import datetime
+import os
+import shutil
+import sys
+import zipfile
 from pathlib import Path
+
 import requests
 from tqdm import tqdm
 
@@ -71,7 +72,7 @@ def check_or_download_model_weights(task_id):
         556: ("Dataset556_GC256", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset556_GC256.zip"),
         557: ("Dataset557_Brain257", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset557_Brain257.zip"),
         558: ("Dataset558_OAR258", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset558_OAR258.zip"),
-        559: ("Dataset559_SAROS259", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset559_Saros259.zip"),
+        559: ("Dataset559_Saros259", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset559_Saros259.zip"),
     }
     
     folder_name, url = weights_info[task_id]
