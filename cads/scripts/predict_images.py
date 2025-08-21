@@ -61,9 +61,16 @@ def main():
     args = parser.parse_args()
 
     folds = 'all'
-
-    input_images = [os.path.join(root, filename) for root, dirnames, filenames in os.walk(
-            args.input_folder) for filename in filenames if filename.endswith(".nii.gz")]
+    
+    if str(args.input_folder).endswith("nii.gz"):
+        input_images = [args.input_folder]
+    else:
+        input_images = [
+            os.path.join(root, filename)
+            for root, dirnames, filenames in os.walk(args.input_folder)
+            for filename in filenames
+            if filename.endswith(".nii.gz")
+        ]
     input_images.sort()
     output_seg_folder = args.output_folder
     task_ids = args.task_id
