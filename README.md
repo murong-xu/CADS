@@ -110,6 +110,11 @@ Carotid artery R/L, Arytenoid cartilage, Mandible, Brainstem, Buccal mucosa, Ora
 **Task 559: General tissue types, major body cavities, broad anatomical categories**
 Subcutaneous tissue, Muscle, Abdominal cavity, Thoracic cavity, Bones, Gland structure, Pericardium, Prosthetic breast implant, Mediastinum, Spinal cord.
 
+## License
+
+- **Codebase** (the `cads` package and all source code in this repository) is licensed under the [Apache License 2.0](LICENSE).  
+- **Model weights** released in the [Releases](https://github.com/murong-xu/CADS/releases) section are licensed under [CC BY 4.0](MODEL_LICENSE).  
+
 ## Citation
 If you find this work useful, please cite:
 
