@@ -3,8 +3,8 @@ import glob
 import os
 
 from cads.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed
-from cads.table_plots.utils.utils import filter_rows, transitional_ids, amos_uterus_ids, compare_models_stat_test, ambigious_gt_structures_to_skip
-from cads.table_plots.plots.plot_functions import generate_boxplot_comparison
+from cads.misc.sandbox.table_plots.utils.utils import filter_rows, transitional_ids, amos_uterus_ids, compare_models_stat_test, ambigious_gt_structures_to_skip
+from cads.misc.sandbox.table_plots.plots.plot_functions import generate_boxplot_comparison
 from cads.dataset_utils.datasets_labelmap import dataset_renamed
 
 datasets_eval = [

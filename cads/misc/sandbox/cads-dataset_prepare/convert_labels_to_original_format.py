@@ -6,13 +6,6 @@ import argparse
 
 from cads.dataset_utils.preprocessing import restore_seg_in_orig_format
 
-# import debugpy
-# debugpy.listen(('0.0.0.0', 4444))
-# print("Waiting for debugger attach")
-# debugpy.wait_for_client()
-# debugpy.breakpoint()
-# print('You can debug your script now')
-
 def main():
     best22k_folder = '/net/cephfs/shares/menze.dqbm.uzh/murong/20k/best_22k/best_22k_more_stat_tests'
     ctready_folder = '/net/cephfs/shares/menze.dqbm.uzh/fercho/ct_ready'
@@ -61,6 +54,7 @@ def main():
             if not os.path.exists(seg_file_out):
                 os.makedirs(os.path.dirname(seg_file_out), exist_ok=True)
             restore_seg_in_orig_format(seg_file_in, seg_file_out, metadata_orig, num_threads_preprocessing=4)
+    
     print('end')
 
 if __name__ == "__main__":

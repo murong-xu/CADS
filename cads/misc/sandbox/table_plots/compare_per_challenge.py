@@ -3,7 +3,7 @@ import glob
 import os
 
 from cads.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed
-from cads.table_plots.utils.utils import filter_rows, transitional_ids, amos_uterus_ids, compare_models_stat_test, ambigious_gt_structures_to_skip
+from cads.misc.sandbox.table_plots.utils.utils import filter_rows, transitional_ids, amos_uterus_ids, compare_models_stat_test, ambigious_gt_structures_to_skip
 
 # TODO: param
 output_folder = '/mnt/hdda/murong/22k/results/compare_totalseg_omaseg_p005'

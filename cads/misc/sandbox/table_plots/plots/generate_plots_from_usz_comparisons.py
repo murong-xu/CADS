@@ -1,8 +1,8 @@
 import numpy as np
 import json
 
-from cads.table_plots.utils.utils import compare_models_stat_test
-from cads.table_plots.plots.plot_functions import generate_boxplot_comparison
+from cads.misc.sandbox.table_plots.utils.utils import compare_models_stat_test
+from cads.misc.sandbox.table_plots.plots.plot_functions import generate_boxplot_comparison
 
 STRUCTURE_NAME_MAPPING = {
     'Brainstem': 'Brainstem',

@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from cads.table_plots.plots.utils import anatomical_system_colors
+from cads.misc.sandbox.table_plots.plots.utils import anatomical_system_colors
 
 # dark blue / orange
 # MODEL1_COLOR = "#115d76" 

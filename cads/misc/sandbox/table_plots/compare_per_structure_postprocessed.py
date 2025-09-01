@@ -4,7 +4,7 @@ import os
 import pickle
 from collections import defaultdict
 
-from cads.table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids, bootstrap_ci, wilcoxon_test, wilcoxon_test_median, paired_t_test
+from cads.misc.sandbox.table_plots.utils.utils import filter_rows, align_and_filter_scores, list_specific_files, transitional_ids, amos_uterus_ids, bootstrap_ci, wilcoxon_test, wilcoxon_test_median, paired_t_test
 from cads.dataset_utils.bodyparts_labelmaps import labelmap_all_structure, labelmap_all_structure_renamed
 
 

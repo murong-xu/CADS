@@ -4,7 +4,7 @@ import os
 from collections import defaultdict
 import json
 
-from cads.table_plots.utils.utils import align_and_filter_scores, bootstrap_ci, check_distribution_perform_stat_test, benjamini_hochberg_correction
+from cads.misc.sandbox.table_plots.utils.utils import align_and_filter_scores, bootstrap_ci, check_distribution_perform_stat_test, benjamini_hochberg_correction
 
 jsonfile_totalseg = '/mnt/hdda/murong/22k/results/usz/STAT_new/TS_updated.json'
 jsonfile_omaseg = '/mnt/hdda/murong/22k/results/usz/STAT_new/OMA_updated.json'

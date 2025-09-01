@@ -1,6 +1,6 @@
-from cads.table_plots.plots.utils import read_results_table
+from cads.misc.sandbox.table_plots.plots.utils import read_results_table
 from cads.dataset_utils.bodyparts_labelmaps import anatomical_systems
-from cads.table_plots.plots.plot_functions import generate_radar_plot_normalized_metrics, generate_radar_plot_distance_metrics
+from cads.misc.sandbox.table_plots.plots.plot_functions import generate_radar_plot_normalized_metrics, generate_radar_plot_distance_metrics
 
 
 PLOT_CONFIG = {
