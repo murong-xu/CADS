@@ -38,7 +38,8 @@ The framework consists of two main components:
 - [📄 CADS Paper Preprint](https://arxiv.org/abs/2507.22953)
 - [🤗 CADS-dataset](https://huggingface.co/datasets/mrmrx/CADS-dataset)
 - [📦 CADS-model Weights](https://github.com/murong-xu/CADS/releases/tag/cads-model_v1.0.0)
-- [🔧 CADS-model 3D Slicer Plugin](https://github.com/murong-xu/SlicerCADS)
+- [🔧 CADS-model Codebase](https://github.com/murong-xu/CADS)
+- [🛠 CADS-model 3D Slicer Plugin](https://github.com/murong-xu/SlicerCADS)
 
 ## Installation
 
