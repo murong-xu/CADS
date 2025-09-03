@@ -25,8 +25,6 @@ setup(name='CADS',
             'nnunetv2==2.5.1',
             'requests==2.27.1;python_version<"3.10"',
             'requests;python_version>="3.10"',
-            'dicom2nifti',
-            'pyarrow', 
             'psutil',
             'TPTBox==0.3.0',
             'acvl_utils==0.2;python_version=="3.9"',  # temporary workaround for nnUNetv2 issue
