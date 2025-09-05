@@ -7,6 +7,8 @@ import numpy as np
 import nibabel as nib
 from functools import partial
 from p_tqdm import p_map
+import gc
+from contextlib import contextmanager
 from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
 
@@ -72,7 +74,6 @@ class nnUNetv2Predictor():
         self.predictor = nnUNetPredictor(tile_step_size=0.5,  # TODO: 0.5, 0.8
                                          use_gaussian=True,
                                          use_mirroring=False,
-                                         perform_everything_on_device=True,
                                          device=self.device,
                                          verbose=verbose,
                                          allow_tqdm=True,
@@ -136,33 +137,120 @@ def save_targets_to_nifti(save_separate_targets, output_targets_dir, affine, lab
         _ = p_map(partial(save_target_to_nifti, seg=seg, output_folder=output_targets_dir, labelmap_inv=labelmap_inv,
                   basename=patient_id, original_affine=affine), targets, num_cpus=nr_threads_saving)
 
+def setup_inference_devices(mode='auto', use_cpu=False, n_tasks=None):
+    """
+    Set up devices for model initialization and inference based on available resources and mode.
+    mode: Inference mode, one of ['auto', 'cpu-cache', 'preload-gpu'].
+        'auto': Automatically choose mode based on available GPU memory and workload.
+        'cpu-cache': Load model weights on CPU, move to GPU for inference.
+        'preload-gpu': Load model weights on GPU, perform inference on GPU.
+    """
+    def _vram_free_gb():
+        if not cuda_ok:
+            return 0.0, 0.0
+        free_b, total_b = torch.cuda.mem_get_info()
+        return free_b / 1024**3, total_b / 1024**3
+    
+    cuda_ok = (torch.cuda.is_available() and not use_cpu)
+    gpu = torch.device('cuda:0') if cuda_ok else torch.device('cpu')
+    cpu = torch.device('cpu')
 
-def predict(files_in, folder_out, model_folder, task_ids, folds='all', use_cpu=False, preprocess_cads=True, postprocess_cads=True, save_all_combined_seg=False, snapshot=False, save_separate_targets=False, num_threads_preprocessing=4, nr_threads_saving=6, verbose=False):
+    if use_cpu or not cuda_ok:
+        chosen_mode = 'cpu-only'
+    else:
+        if mode not in ('auto', 'cpu-cache', 'preload-gpu'):
+            mode = 'auto'
+        if mode == 'auto':
+            high_vram_thresh_gb = 28.0  # I think a 28GB GPU should be safe for batch inference
+            single_model_thresh_gb = 12.0  # also 12GB should be safe for a single task inference
+
+            free_gb, total_gb = _vram_free_gb() 
+            # VRAM is sufficient           
+            if free_gb >= high_vram_thresh_gb:
+                chosen_mode = 'preload-gpu'
+            # intermediate VRAM（>=12GB) but single task, can still use preload-gpu
+            elif n_tasks == 1 and free_gb >= single_model_thresh_gb:
+                chosen_mode = 'preload-gpu'
+            else:
+                # no enough VRAM
+                chosen_mode = 'cpu-cache'
+        else:
+            chosen_mode = mode
+
+    # Set devices based on chosen mode
+    if chosen_mode == 'cpu-only':
+        device_init = cpu
+        device_run = cpu
+    elif chosen_mode == 'cpu-cache':
+        device_init = cpu
+        device_run = gpu
+    else:  # preload-gpu mode
+        device_init = gpu
+        device_run = gpu
+
+    if chosen_mode == 'cpu-only':
+        print(f"[predict] CPU-only mode")
+    else:
+        free_gb, total_gb = _vram_free_gb()
+        print(f"[predict] CUDA available. free={free_gb:.1f} GB / total={total_gb:.1f} GB | mode={chosen_mode}")
+
+    return chosen_mode, device_init, device_run
+
+@contextmanager
+def use_device(pred, target_device: torch.device, restore_to: torch.device = None, clear_cuda_cache: bool = True):
+    """
+    Temporarily switch the device of the predictor to the target_device, and restore it back to restore_to (default is to the original device) upon exit.
+    - pred: a nnUNetPredictor
+    - clear_cuda_cache: if switching from CUDA to CPU, clear the CUDA cache to free up memory
+    """
+    old_device = getattr(pred, "device", torch.device("cpu"))
+    try:
+        if old_device != target_device:
+            pred.predictor.network = pred.predictor.network.to(target_device)
+            pred.predictor.device = target_device
+            pred.device = target_device
+        yield pred
+    finally:
+        dst = old_device if restore_to is None else restore_to
+        if getattr(pred, "device", target_device) != dst:
+            pred.predictor.network = pred.predictor.network.to(dst)
+            pred.predictor.device = dst
+            pred.device = dst
+        # cpu-cache mode, low VRAM case
+        if clear_cuda_cache and target_device.type == "cuda" and dst.type == "cpu" and torch.cuda.is_available():
+            try:
+                torch.cuda.synchronize()
+                torch.cuda.empty_cache()
+                gc.collect()
+            except Exception:
+                pass
+
+def predict(files_in, folder_out, model_folder, task_ids, 
+            folds='all', use_cpu=False, preprocess_cads=True, postprocess_cads=True, 
+            save_all_combined_seg=False, snapshot=False, save_separate_targets=False, 
+            num_threads_preprocessing=4, nr_threads_saving=6, 
+            mode='auto', verbose=False):
     """
     Loop images and use nnUNetv2 models to predict. 
     """
-    if use_cpu:
-        device = torch.device('cpu') 
-    else:
-        device = torch.device('cuda')
-
-    # TODO: really need to set up torch threads?
-    # torch.set_num_threads(1)
-    # torch.set_num_interop_threads(1)
-
     labelmap_all_structure_inv = {v: k for k,
                                   v in labelmap_all_structure.items()}
+
+    # Ensure task_ids include dependencies
+    task_ids = list(sorted(task_ids))
+    if any(t in task_ids for t in (557, 558)) and 553 not in task_ids:
+        task_ids.append(553)
+    if 558 in task_ids and 552 not in task_ids:
+        task_ids.append(552)
+    task_ids.sort()
+
+    # Setup device and inference mode
+    chosen_mode, device_init, device_run = setup_inference_devices(mode=mode, use_cpu=use_cpu, n_tasks=len(task_ids))
 
     # Init nnUNetv2 predictor
     models = {}
     for task_id in task_ids:
-        models[task_id] = nnUNetv2Predictor(model_folder, task_id, device, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth',
-                                            num_threads_preprocessing=num_threads_preprocessing, num_threads_nifti_save=nr_threads_saving, verbose=verbose)
-    if any(task in task_ids for task in [557, 558]) and 553 not in task_ids:
-        models[553] = nnUNetv2Predictor(model_folder, 553, device, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth',
-                                            num_threads_preprocessing=num_threads_preprocessing, num_threads_nifti_save=nr_threads_saving, verbose=verbose)
-    if 558 in task_ids and 552 not in task_ids:
-        models[552] = nnUNetv2Predictor(model_folder, 552, device, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth',
+        models[task_id] = nnUNetv2Predictor(model_folder, task_id, device_init, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth',
                                             num_threads_preprocessing=num_threads_preprocessing, num_threads_nifti_save=nr_threads_saving, verbose=verbose)
 
     # Loop images
@@ -182,17 +270,13 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', use_cpu=F
         output_dir = os.path.join(folder_out, patient_id)
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
-        if save_separate_targets:
-            output_targets_dir = os.path.join(output_dir, 'targets')
-            if not os.path.exists(output_targets_dir):
-                os.makedirs(output_targets_dir, exist_ok=True)
 
-        # Inference and save segmentations: loop 9x models
-        task_ids.sort()
+        # Inference
         for task_id in task_ids:
             file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
-            # models[task_id].predict([[file_in]], [file_out])  # for batch_predict
-            models[task_id].predict(file_in, file_out)
+            with use_device(models[task_id], device_run, restore_to=device_init):
+                models[task_id].predict(file_in, file_out)
+                # models[task_id].predict([[file_in]], [file_out])  # for batch_predict
 
             if postprocess_cads:
                 if task_id in _do_outlier_postprocessing_groups:
@@ -201,8 +285,9 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', use_cpu=F
                     file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
                     if not os.path.exists(file_seg_brain_group):
                         print(f"Task {task_id} needs pre-segmentation from task 553, generating segmentations...")
-                        # models[553].predict([[file_in]], [file_seg_brain_group])  # for batch_predict
-                        models[553].predict(file_in, file_seg_brain_group)
+                        with use_device(models[553], device_run, restore_to=device_init):
+                            # models[553].predict([[file_in]], [file_seg_brain_group])  # for batch_predict
+                            models[553].predict(file_in, file_seg_brain_group)
 
                     # For group 558, also need cervical vertebrae as reference
                     if task_id == 558:
@@ -212,8 +297,9 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', use_cpu=F
                             # Only predict vertebrae if brain check failed
                             if not os.path.exists(file_seg_vertebrae_group):
                                 print(f"Task {task_id} needs pre-segmentation from task 552 (spine), generating segmentations...")
-                                # models[552].predict([[file_in]], [file_seg_vertebrae_group])  # for batch_predict
-                                models[552].predict(file_in, file_seg_vertebrae_group)
+                                with use_device(models[552], device_run, restore_to=device_init):
+                                    # models[552].predict([[file_in]], [file_seg_vertebrae_group])  # for batch_predict
+                                    models[552].predict(file_in, file_seg_vertebrae_group)
                             postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
                     else:
                         postprocess_head(task_id, file_seg_brain_group, file_out)
@@ -244,6 +330,9 @@ def predict(files_in, folder_out, model_folder, task_ids, folds='all', use_cpu=F
 
                 # Save structures into separate binary segmentations
                 if save_separate_targets:
+                    output_targets_dir = os.path.join(output_dir, 'targets')
+                    if not os.path.exists(output_targets_dir):
+                        os.makedirs(output_targets_dir, exist_ok=True)
                     save_targets_to_nifti(save_separate_targets, output_targets_dir,
                                           affine, labelmap, seg, patient_id, nr_threads_saving)
 

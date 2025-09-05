@@ -66,7 +66,7 @@ def main():
                     help='Disable CADS postprocessing')
 
     parser.add_argument("-np", "--nr_thr_preprocess", type=int,
-                        help="Nr of threads for preprocessing", default=1)
+                        help="Nr of threads for preprocessing", default=4)
 
     parser.add_argument("-ns", "--nr_thr_saving", type=int,
                         help="Nr of threads for saving segmentations", default=6)
@@ -103,7 +103,8 @@ def main():
     predict(test_images, args.output_folder, model_folder, args.task_id, folds=folds, use_cpu=False,
             preprocess_cads=args.preprocessing, postprocess_cads = args.postprocessing, 
             save_all_combined_seg=False, snapshot=False, save_separate_targets=False,
-            num_threads_preprocessing=args.nr_thr_preprocess, nr_threads_saving=args.nr_thr_saving, verbose=args.verbose)
+            num_threads_preprocessing=args.nr_thr_preprocess, nr_threads_saving=args.nr_thr_saving, 
+            mode='preload-gpu', verbose=args.verbose)
 
 
 if __name__ == "__main__":

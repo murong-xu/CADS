@@ -28,6 +28,12 @@ def log_gpu_state(tag, logfile=None):
         with open(logfile, "a") as f:
             f.write(msg + "\n")
 
+# Usage:
+# logfile = '/mnt/hdda/murong/debug/profiling/vram.log'
+# log_gpu_state("startup", logfile=logfile)
+# with VRAMMonitor("predict()", logfile=logfile):
+#    predict( ... )
+
 class VRAMMonitor:
     """Capture per-block CUDA peak memory."""
     def __init__(self, tag, logfile=None, sync=True):
