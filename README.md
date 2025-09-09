@@ -39,11 +39,11 @@ The framework consists of two main components:
 - [🤗 CADS-dataset](https://huggingface.co/datasets/mrmrx/CADS-dataset)
 - [📦 CADS-model Weights](https://github.com/murong-xu/CADS/releases/tag/cads-model_v1.0.0)
 - [🔧 CADS-model Codebase](https://github.com/murong-xu/CADS)
-- [🛠 CADS-model 3D Slicer Plugin](https://github.com/murong-xu/SlicerCADS)
+- [🛠 CADS-model 3D Slicer Plugin](https://github.com/murong-xu/SlicerCADSWholeBodyCTSeg)
 
 ## Installation
 
-Below we provide instructions for Python script run. For 3D Slicer plugin installation, please refer to [SlicerCADS](https://github.com/murong-xu/SlicerCADS).
+Below we provide instructions for Python script run. For 3D Slicer plugin installation, please refer to [SlicerCADSWholeBodyCTSeg](https://github.com/murong-xu/SlicerCADSWholeBodyCTSeg).
 
 ```bash
 # 1. Clone the repository
