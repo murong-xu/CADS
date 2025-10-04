@@ -38,20 +38,25 @@ def remove_rotation_and_translation(affine: np.ndarray) -> np.ndarray:
     new_affine = np.diag(spacings + [1.])
     return new_affine
 
-
-def reorient_to(arr, aff, axcodes_to=('P', 'I', 'R'), verb=False):
-    # Note: nibabel axes codes describe the direction not origin of axes
-    # direction PIR+ = origin ASL
+def reorient_to(arr, aff, axcodes_to=('R', 'A', 'S'), target_affine=None, verb=False):
+    """
+    Reorient image to target orientation.
+    """
     ornt_fr = nio.io_orientation(aff)
+    axcodes_fr = nio.ornt2axcodes(ornt_fr)
     ornt_to = nio.axcodes2ornt(axcodes_to)
     ornt_trans = nio.ornt_transform(ornt_fr, ornt_to)
-    arr = nio.apply_orientation(arr, ornt_trans)
-    aff_trans = nio.inv_ornt_aff(ornt_trans, arr.shape)
-    newaff = np.matmul(aff, aff_trans)
-    newimg = nib.Nifti1Image(arr, newaff)
     if verb:
-        print('[*] Image reoriented from', nio.ornt2axcodes(ornt_fr), 'to', axcodes_to)
-    return newimg
+        print(f"From orientation: {axcodes_fr}")
+        print(f"To orientation: {axcodes_to}")
+    arr_reoriented = nio.apply_orientation(arr, ornt_trans)
+    # If target_affine is given, use it directly. Otherwise, compute new affine.
+    if target_affine is not None:
+        newaff = target_affine
+    else:
+        aff_trans = nio.inv_ornt_aff(ornt_trans, arr_reoriented.shape)
+        newaff = np.matmul(aff, aff_trans)
+    return nib.Nifti1Image(arr_reoriented, newaff)
 
 
 def resample_img(img, zoom=0.5, order=0, nr_cpus=-1):
@@ -269,29 +274,62 @@ def preprocess_nifti(file_in, spacing=1.5, num_threads_preprocessing=2):
             'z_size': original_z_size,
         }
         return temp_subdir, temp_path, metadata_orig, True
-    
+
+def get_abs_spacing_from_affine(affine):
+    """
+    Get spacing from affine matrix using vector lengths, this function ensures correct spacing 
+    calculation even for non-diagonal affines.
+    """
+    spacing = np.sqrt(np.sum(affine[:3, :3]**2, axis=0))
+    return spacing
+
+def is_affine_diagonal(affine, tol=1e-6):
+    """Check if the affine matrix is diagonal (no rotation or shearing)."""
+    return np.allclose(affine[:3, :3], np.diag(np.diag(affine[:3, :3])), atol=tol)
 
 def restore_seg_in_orig_format(file_seg_in, file_seg_out, metadata_orig, num_threads_preprocessing=2):
     print('Restore the segmentation to original format...')
 
     seg_preprocessed = nib.load(file_seg_in)
-    orig_spacing = metadata_orig['spacing']
     orig_affine = metadata_orig['affine']
 
-    # Resample to original spacing (using absolute values for zoom)
-    abs_spacing = np.abs(orig_spacing)
-    orig_shape = (metadata_orig['x_size'], 
-                 metadata_orig['y_size'], 
-                 metadata_orig['z_size'])
-    seg_resampled = change_spacing(seg_preprocessed, abs_spacing, target_shape=orig_shape, order=0, 
-                                 dtype=np.int32, nr_cpus=num_threads_preprocessing)
-
-    # Reorient to original orientation
-    orig_orientation = nio.ornt2axcodes(nio.io_orientation(orig_affine))
-    seg_reoriented = reorient_to(seg_resampled.get_fdata(), seg_resampled.affine, 
-                                orig_orientation, verb=True)
+    # 1. Get current and target orientations
+    current_ornt = nio.io_orientation(seg_preprocessed.affine)
+    current_axcodes = nio.ornt2axcodes(current_ornt)
     
-    # Restore final segmentation with exactly the original affine matrix (translation etc.)
+    target_ornt = nio.io_orientation(orig_affine)
+    target_axcodes = nio.ornt2axcodes(target_ornt)
+    
+    # 2. Get original spacing and sizes
+    spacings = get_abs_spacing_from_affine(orig_affine)
+    orig_sizes = [metadata_orig['x_size'], 
+                  metadata_orig['y_size'], 
+                  metadata_orig['z_size']]
+    
+    # 3. Determine the correct reading order of spacing and shape from current to target orientation
+    reordered_spacings = np.zeros(3)
+    reordered_shape = np.zeros(3, dtype=int)
+    
+    for curr_idx, curr_code in enumerate(current_axcodes):
+        if curr_code in target_axcodes:
+            tgt_idx = target_axcodes.index(curr_code)
+        else:
+            opposite_code = {'R':'L', 'L':'R', 'A':'P', 'P':'A', 'S':'I', 'I':'S'}[curr_code]
+            tgt_idx = target_axcodes.index(opposite_code)
+        reordered_spacings[curr_idx] = spacings[tgt_idx]
+        reordered_shape[curr_idx] = orig_sizes[tgt_idx]
+
+    # 4. Resample to original spacing
+    seg_resampled = change_spacing(seg_preprocessed, reordered_spacings, 
+                                 target_shape=tuple(reordered_shape), 
+                                 order=0, dtype=np.int32, 
+                                 nr_cpus=num_threads_preprocessing)
+
+    # 5. Reorient to original orientation
+    seg_reoriented = reorient_to(seg_resampled.get_fdata(), seg_resampled.affine, 
+                                target_axcodes, target_affine=orig_affine, verb=True)
+
+    # 6. Restore final segmentation
     seg_restored = nib.Nifti1Image(seg_reoriented.get_fdata().astype(np.uint8), 
                                   orig_affine)
     
