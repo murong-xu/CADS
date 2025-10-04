@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import os
 
 setup(name='CADS',
-        version='1.0.0',
+        version='1.0.1',
         description='Comprehensive anatomical segmentation model for 167 structures in Computed Tomography, spanning head to knee regions.',
         long_description='For detailed documentation, model weights, and source code, visit: https://github.com/murong-xu/CADS',
         url='https://github.com/murong-xu/CADS',
@@ -22,12 +22,13 @@ setup(name='CADS',
             'tqdm>=4.45.0',
             'p_tqdm',
             'xvfbwrapper',
-            'nnunetv2==2.5.1',
+            'nnunetv2==2.5.2',
             'requests==2.27.1;python_version<"3.10"',
             'requests;python_version>="3.10"',
             'psutil',
             'TPTBox==0.3.0',
             'acvl_utils==0.2;python_version=="3.9"',  # temporary workaround for nnUNetv2 issue
+            'acvl_utils>=0.2,<0.3;python_version!="3.9"',  # For other Python versions: version range
         ],
         zip_safe=False,
         classifiers=[

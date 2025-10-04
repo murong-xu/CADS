@@ -2,10 +2,12 @@ import argparse
 import torch
 import os
 
+from cads.utils.libs import setup_nnunet_env
+setup_nnunet_env()
 from cads.utils.inference import predict
 from cads.dataset_utils.select_files import select_imgs
 from cads.dataset_utils.bodyparts_labelmaps import labelmap_all_structure
-from cads.utils.libs import get_model_weights_dir, setup_nnunet_env, check_or_download_model_weights
+from cads.utils.libs import get_model_weights_dir, check_or_download_model_weights
 
 def check_input_task(value):
     valid_numbers = {551, 552, 553, 554, 555, 556, 557, 558, 559}
@@ -92,7 +94,6 @@ def main():
     # parepare local model weights
     task_ids = args.task_id
     model_folder = get_model_weights_dir()
-    setup_nnunet_env()
     for task_id in task_ids:
         check_or_download_model_weights(task_id)
     if any(task in task_ids for task in [557, 558]) and 553 not in task_ids:
