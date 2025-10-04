@@ -51,6 +51,7 @@ def main():
         imgPositionPatient = ast.literal_eval(metadata.loc[idx, "ImagePositionPatient"])
         spacing_xyz = (spacing_xy[0], spacing_xy[1], spacing_z)
         
+        img_data = img_data.astype(np.float32)
         img_data = slope * img_data + intercept
         img_data = np.clip(img_data, hu_min, hu_max)
         img_data = ((img_data / 1000)).astype(np.float32)
