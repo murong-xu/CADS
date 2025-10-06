@@ -56,7 +56,8 @@ conda activate CADS_env
 
 # 3. Install PyTorch
 # Visit https://pytorch.org/ and select the appropriate version based on your Operating System and CUDA version
-# Requirement: torch>=2.1.2
+# Browse previous releases here if you prefer not to install the latest version: https://pytorch.org/get-started/previous-versions/
+# CADS requirement: torch>=2.1.2
 # Example installation command for Linux with CUDA 12.4:
 pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
 
