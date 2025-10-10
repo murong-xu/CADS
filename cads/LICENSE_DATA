@@ -1,0 +1,16 @@
+CADS-dataset License
+
+The CADS-dataset provides curated anatomical segmentation masks and other derived data for CT images collected from multiple public sources.
+While the original CT scans remain the property of their respective dataset owners (see dataset documentation: https://huggingface.co/datasets/mrmrx/CADS-dataset),
+all derivatives were created by the CADS team.
+
+If you use the CADS-dataset or any part of its segmentations in your work, please kindly cite:
+
+@article{xu2025cads,
+  title={CADS: A Comprehensive Anatomical Dataset and Segmentation for Whole-Body Anatomy in Computed Tomography},
+  author={Xu, Murong and Amiranashvili, Tamaz and Navarro, Fernando and Fritsak, Maksym and Hamamci, Ibrahim Ethem and Shit, Suprosanna and Wittmann, Bastian and Er, Sezgin and Christ, Sebastian M. and de la Rosa, Ezequiel and Deseoe, Julian and Graf, Robert and Möller, Hendrik and Sekuboyina, Anjany and Peeken, Jan C. and Becker, Sven and Baldini, Giulia and Haubold, Johannes and Nensa, Felix and Hosch, René and Mirajkar, Nikhil and Khalid, Saad and Zachow, Stefan and Weber, Marc-André and Langs, Georg and Wasserthal, Jakob and Ozdemir, Mehmet Kemal and Fedorov, Andrey and Kikinis, Ron and Tanadini-Lang, Stephanie and Kirschke, Jan S. and Combs, Stephanie E. and Menze, Bjoern},
+  journal={arXiv preprint arXiv:2507.22953},
+  year={2025}
+}
+
+Thank you for acknowledging our work. Proper citation helps support open and reproducible research.
