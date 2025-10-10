@@ -158,7 +158,7 @@
 | 1     | Spinal canal                  |
 | 2     | Larynx                        |
 | 3     | Heart                         |
-| 4     | Colostomy bag                 |
+| 4     | Peritoneal cavity             |
 | 5     | Sigmoid colon                 |
 | 6     | Rectum                        |
 | 7     | Prostate                      |

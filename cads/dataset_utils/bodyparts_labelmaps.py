@@ -134,7 +134,7 @@ labelmap_part_oarrad = {
     1: "spinal_canal",
     2: "larynx",
     3: "heart",
-    4: "bowel_bag",
+    4: "bowel_bag",  # peritoneal cavity
     5: "sigmoid",
     6: "rectum",
     7: "prostate",
@@ -331,7 +331,7 @@ labelmap_all_structure = {
     105: 'spinal_canal',
     106: 'larynx',
     107: 'heart',
-    108: 'bowel_bag',
+    108: 'bowel_bag',  # peritoneal cavity
     109: 'sigmoid',
     110: 'rectum',
     111: 'prostate',
@@ -501,7 +501,7 @@ labelmap_all_structure_renamed = {
     105: 'Spinal canal',
     106: 'Larynx',
     107: 'Heart',
-    108: 'Colostomy bag',
+    108: 'Peritoneal cavity',
     109: 'Sigmoid colon',
     110: 'Rectum',
     111: 'Prostate',
@@ -610,7 +610,7 @@ totalseg_exclude_to_compare = [
     'Rectus abdominis muscle R',
     'Rectus abdominis muscle L',
     'Spinal canal', 
-    'Colostomy bag',
+    'Peritoneal cavity',
     'Sigmoid colon',
     'Rectum',
     'Seminal vesicle',
@@ -697,7 +697,7 @@ anatomical_systems = {
     "Digestive System": [
         "Liver", "Stomach", "Pancreas", "Small intestine", "Duodenum", "Colon",
         "Gallbladder", "Sigmoid colon", "Rectum", "Oral cavity",
-        "Esophagus", "Cervical esophagus", "Colostomy bag", "Cricopharyngeus"
+        "Esophagus", "Cervical esophagus", "Peritoneal cavity", "Cricopharyngeus"
     ],
     "Urinary System": [
         "Kidney R", "Kidney L", "Urinary bladder"
