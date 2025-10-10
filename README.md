@@ -118,7 +118,7 @@ Subcutaneous tissue, Muscle, Abdominal cavity, Thoracic cavity, Bones, Gland str
 - **Model weights** released in the [Releases](https://github.com/murong-xu/CADS/releases) section are licensed under [CC BY 4.0](MODEL_LICENSE).  
 
 ## Citation
-If you find this work useful, please cite:
+If you use any component of CADS (CADS-dataset, its curated segmentation masks, pretrained CADS-model, or the 3D Slicer extension), please cite:
 
 ```bibtex
 @article{xu2025cads,
