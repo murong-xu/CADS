@@ -2,6 +2,7 @@ import os
 import sys
 import torch
 import time
+import traceback
 from pathlib import Path
 import numpy as np
 import nibabel as nib
@@ -273,42 +274,93 @@ def predict(files_in, folder_out, model_folder, task_ids,
 
         # Inference
         for task_id in task_ids:
-            file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
-            with use_device(models[task_id], device_run, restore_to=device_init):
-                models[task_id].predict(file_in, file_out)
-                # models[task_id].predict([[file_in]], [file_out])  # for batch_predict
+            try:
+                file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
+                with use_device(models[task_id], device_run, restore_to=device_init):
+                    models[task_id].predict(file_in, file_out)
+                    # models[task_id].predict([[file_in]], [file_out])  # for batch_predict
 
-            if postprocess_cads:
-                if task_id in _do_outlier_postprocessing_groups:
-                    postprocess_seg_TPTBox(file_out, task_id, file_out)
-                if task_id in [557, 558]:
-                    file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
-                    if not os.path.exists(file_seg_brain_group):
-                        print(f"Task {task_id} needs pre-segmentation from task 553, generating segmentations...")
-                        with use_device(models[553], device_run, restore_to=device_init):
-                            # models[553].predict([[file_in]], [file_seg_brain_group])  # for batch_predict
-                            models[553].predict(file_in, file_seg_brain_group)
+                if postprocess_cads:
+                    try:
+                        if task_id == 551:
+                            raise ValueError("TEST ERROR: Simulated postprocessing failure for task 551")
+                        if task_id in _do_outlier_postprocessing_groups:
+                            postprocess_seg_TPTBox(file_out, task_id, file_out)
+                        if task_id in [557, 558]:
+                            file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
+                            if not os.path.exists(file_seg_brain_group):
+                                print(f"Task {task_id} needs pre-segmentation from task 553, generating segmentations...")
+                                with use_device(models[553], device_run, restore_to=device_init):
+                                    # models[553].predict([[file_in]], [file_seg_brain_group])  # for batch_predict
+                                    models[553].predict(file_in, file_seg_brain_group)
 
-                    # For group 558, also need cervical vertebrae as reference
-                    if task_id == 558:
-                        file_seg_vertebrae_group = os.path.join(output_dir, patient_id+'_part_'+str(552)+'.nii.gz')
-                        # First check if brain exists and is sufficient
-                        if not postprocess_head_and_neck(task_id, file_seg_brain_group, None, file_out):
-                            # Only predict vertebrae if brain check failed
-                            if not os.path.exists(file_seg_vertebrae_group):
-                                print(f"Task {task_id} needs pre-segmentation from task 552 (spine), generating segmentations...")
-                                with use_device(models[552], device_run, restore_to=device_init):
-                                    # models[552].predict([[file_in]], [file_seg_vertebrae_group])  # for batch_predict
-                                    models[552].predict(file_in, file_seg_vertebrae_group)
-                            postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
-                    else:
-                        postprocess_head(task_id, file_seg_brain_group, file_out)
+                            # For group 558, also need cervical vertebrae as reference
+                            if task_id == 558:
+                                file_seg_vertebrae_group = os.path.join(output_dir, patient_id+'_part_'+str(552)+'.nii.gz')
+                                # First check if brain exists and is sufficient
+                                if not postprocess_head_and_neck(task_id, file_seg_brain_group, None, file_out):
+                                    # Only predict vertebrae if brain check failed
+                                    if not os.path.exists(file_seg_vertebrae_group):
+                                        print(f"Task {task_id} needs pre-segmentation from task 552 (spine), generating segmentations...")
+                                        with use_device(models[552], device_run, restore_to=device_init):
+                                            # models[552].predict([[file_in]], [file_seg_vertebrae_group])  # for batch_predict
+                                            models[552].predict(file_in, file_seg_vertebrae_group)
+                                    postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
+                            else:
+                                postprocess_head(task_id, file_seg_brain_group, file_out)
+                    except Exception as e:
+                        error_log = os.path.join(output_dir, f"{patient_id}_ERROR.log")
+                        with open(error_log, 'a') as f:
+                            f.write(f"\n{'='*60}\n")
+                            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Postprocessing Error - Task {task_id}\n")
+                            f.write(f"{'='*60}\n")
+                            f.write(f"Error: {str(e)}\n\n")
+                            f.write("Traceback:\n")
+                            f.write(traceback.format_exc())
+                            f.write("\n")
+
+                        print(f"Warning: Postprocessing failed for task {task_id}: {e}")
+                        traceback.print_exc()
+            except Exception as e:
+                error_log = os.path.join(output_dir, f"{patient_id}_ERROR.log")
+                with open(error_log, 'a') as f:
+                    f.write(f"\n{'='*60}\n")
+                    f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CRITICAL ERROR - Task {task_id} FAILED\n")
+                    f.write(f"{'='*60}\n")
+                    f.write(f"Error: {str(e)}\n\n")                
+                    f.write("Traceback:\n")
+                    f.write(traceback.format_exc())
+                    f.write("\n")
+                    f.write("    WARNING: Processing was interrupted. Remaining tasks and geometry restoration were not performed.\n")
+                    f.write("    Existing output files are in preprocessed format (1.5mm spacing), NOT original image geometry.\n")
+                    f.write("    Please fix the error and re-run to get outputs in original geometry.\n\n")
+
+                print(f"Error: Task {task_id} failed: {e}")
+                traceback.print_exc()
+                print(f"Skipping task {task_id} and continuing with remaining tasks...")
+                continue
 
         # reverse pre-processing
         for task_id in task_ids:
             file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
-            if preprocess_cads and preprocessing_done:
-                restore_seg_in_orig_format(file_out, file_out, metadata_orig, num_threads_preprocessing=num_threads_preprocessing)
+            try:
+                if preprocess_cads and preprocessing_done:
+                    restore_seg_in_orig_format(file_out, file_out, metadata_orig, num_threads_preprocessing=num_threads_preprocessing)
+            except Exception as e:
+                error_log = os.path.join(output_dir, f"{patient_id}_ERROR.log")
+                with open(error_log, 'a') as f:
+                    f.write(f"\n{'='*60}\n")
+                    f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Restore Error - Task {task_id}\n")
+                    f.write(f"{'='*60}\n")
+                    f.write(f"Error: {str(e)}\n\n")
+                    f.write("Traceback:\n")
+                    f.write(traceback.format_exc())
+                    f.write("\n")
+                    f.write(f"    WARNING: Failed to restore task {task_id} to original geometry.\n")
+                    f.write(f"    Output file {file_out} remains in preprocessed format (1.5mm spacing).\n\n")
+
+                print(f"  Error: Failed to restore task {task_id}: {e}")
+                traceback.print_exc()
 
         # Combine all classes into a single segmentation nii file
         if save_all_combined_seg:
@@ -353,5 +405,8 @@ def predict(files_in, folder_out, model_folder, task_ids,
                 print(f"Error: {e}")
 
         if temp_dir:
-            cleanup_temp_files(temp_dir)
+            try:
+                cleanup_temp_files(temp_dir)
+            except Exception as e:
+                print(f"Warning: Failed to cleanup temp files in {temp_dir}: {e}")
         print(f"Finished in {time.time() - start:.2f}s")
