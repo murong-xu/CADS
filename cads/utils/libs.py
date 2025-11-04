@@ -60,9 +60,8 @@ def setup_nnunet_env():
     os.environ["nnUNet_results"] = str(weights_dir)
     
     # Disable torch.compile to avoid compatibility issues (fp32 TypeError)
-    # Users can override by setting nnUNet_compile=t before running if needed
-    if "nnUNet_compile" not in os.environ:
-        os.environ["nnUNet_compile"] = "f"
+    # TODO: check the 557 models if can fix the issue and enable compile again
+    os.environ["nnUNet_compile"] = "f"
 
 def check_or_download_model_weights(task_id):
     weights_dir = Path(get_model_weights_dir())
