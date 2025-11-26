@@ -333,6 +333,11 @@ def restore_seg_in_orig_format(file_seg_in, file_seg_out, metadata_orig, num_thr
     seg_restored = nib.Nifti1Image(seg_reoriented.get_fdata().astype(np.uint8), 
                                   orig_affine)
     
+    # Explicitly set pixdim in header to match original spacing
+    # This ensures pixdim is not recalculated by nibabel
+    orig_pixdim = get_abs_spacing_from_affine(orig_affine)
+    seg_restored.header['pixdim'][1:4] = orig_pixdim
+
     nib.save(seg_restored, file_seg_out)
 
 
