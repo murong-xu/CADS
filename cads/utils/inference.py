@@ -282,8 +282,6 @@ def predict(files_in, folder_out, model_folder, task_ids,
 
                 if postprocess_cads:
                     try:
-                        if task_id == 551:
-                            raise ValueError("TEST ERROR: Simulated postprocessing failure for task 551")
                         if task_id in _do_outlier_postprocessing_groups:
                             postprocess_seg_TPTBox(file_out, task_id, file_out)
                         if task_id in [557, 558]:
