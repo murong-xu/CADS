@@ -45,6 +45,21 @@ The framework consists of two main components:
 
 Below we provide instructions for Python script run. For 3D Slicer plugin installation, please refer to [SlicerCADSWholeBodyCTSeg](https://github.com/murong-xu/SlicerCADSWholeBodyCTSeg).
 
+### Recommended Installation
+The recommended method of installing this package is to use a modern package
+manager such as [Pixi](https://pixi.prefix.dev/latest/installation/) or [UV](https://docs.astral.sh/uv/getting-started/installation/). These require installation before running the
+below code.
+
+```bash
+git clone git@github.com:murong-xu/CADS.git
+
+cd ./CADS
+
+pixi shell # or uv sync && source .venv/bin/activate for `uv`
+```
+
+Alternatively conda be used instead by the following instructions:
+
 ```bash
 # 1. Clone the repository
 git clone git@github.com:murong-xu/CADS.git
