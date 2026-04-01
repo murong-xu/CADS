@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import os
 
 setup(name='CADS',
-        version='1.0.2',
+        version='1.0.3',
         description='Comprehensive anatomical segmentation model for 167 structures in Computed Tomography, spanning head to knee regions.',
         long_description='For detailed documentation, model weights, and source code, visit: https://github.com/murong-xu/CADS',
         url='https://github.com/murong-xu/CADS',

@@ -1,7 +1,12 @@
 Model License
 
-The model weights released in the Releases section of this repository are licensed under the Creative Commons Attribution 4.0 International License (CC BY 4.0).
+The model weights released in the Releases section of this repository are licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0).
+
+This licensing reflects the inclusion of training data with non-commercial restrictions.
+
+A fully open version of the model weights under CC BY 4.0 is currently under preparation and will be released in the near future.
 
 License Text
-This work is licensed under a Creative Commons Attribution 4.0 International License:
-https://creativecommons.org/licenses/by/4.0/
+
+This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0):
+https://creativecommons.org/licenses/by-nc-sa/4.0/
