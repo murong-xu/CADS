@@ -15,7 +15,7 @@
 6. [Citation](#citation)
 
 ## Overview
-<img src="resources/images/whole-body-parts-visualization.png" alt="overview" width="100%">
+<img src="resources/images/whole-body-parts-visualization.svg" alt="overview" width="100%">
 
 CADS is a robust, fully automated framework for segmenting 167 anatomical structures in Computed Tomography (CT), spanning from head to knee regions across diverse anatomical systems.
 
