@@ -103,7 +103,7 @@ visceralnew_labelmap = {
     8: 'heart',
     9: 'esophagus',
     10: 'stomach',
-    11: 'bowel_bag',  # peritoneal cavity
+    11: 'bowel_bag',  # bowel space
     12: 'sigmoid',
     13: 'rectum',
     14: 'prostate',

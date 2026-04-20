@@ -134,7 +134,7 @@ labelmap_part_oarrad = {
     1: "spinal_canal",
     2: "larynx",
     3: "heart",
-    4: "bowel_bag",  # peritoneal cavity
+    4: "bowel_bag",  # bowel space
     5: "sigmoid",
     6: "rectum",
     7: "prostate",
@@ -331,7 +331,7 @@ labelmap_all_structure = {
     105: 'spinal_canal',
     106: 'larynx',
     107: 'heart',
-    108: 'bowel_bag',  # peritoneal cavity
+    108: 'bowel_bag',  # bowel space
     109: 'sigmoid',
     110: 'rectum',
     111: 'prostate',

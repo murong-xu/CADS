@@ -101,7 +101,7 @@ Humerus R/L, Scapula R/L, Clavicle R/L, Femur R/L, Hip stucture R/L, Bone struct
 Ribs 1-12 R/L.
 
 **Task 556: Miscellaneous structures for radiation therapy**
-Spinal canal, Larynx, Heart part, Abdominal intestinal region, Sigmoid colon, Rectum, Prostate, Seminal vesicle, Mammary gland R/L, Sternum, Psoas major muscle R/L, Rectus abdominis muscle R/L.
+Spinal canal, Larynx, Heart, Bowel space, Sigmoid colon, Rectum, Prostate, Seminal vesicle, Mammary gland R/L, Sternum, Psoas major muscle R/L, Rectus abdominis muscle R/L.
 
 **Task 557: Brain and head tissues**
 White matter, Gray matter, Cerebrospinal fluid, Scalp, Eyeballs, Compact bone, Spongy bone, Vascular structure of head, Rectus eye muscle structure.
