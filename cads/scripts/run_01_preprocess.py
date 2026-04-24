@@ -2,7 +2,29 @@ import argparse
 import os
 import time
 
+from joblib import Parallel, delayed
+
 from cads.dataset_utils.preprocessing import preprocess_nifti_and_save_to_dir
+
+
+def _derive_patient_id(file_in: str) -> str:
+    filename = os.path.basename(file_in)
+    if filename.endswith("0000.nii.gz"):
+        return filename[:-12]
+    return filename[:-7]
+
+
+def _preprocess_single_image(file_in, output_preprocessed_images_folder, output_metadata_folder, spacing, num_threads_preprocessing, total_images, index):
+    patient_id = _derive_patient_id(file_in)
+    print(f"Preprocessing file {index + 1}/{total_images} {patient_id}")
+    preprocess_nifti_and_save_to_dir(
+        file_in,
+        output_preprocessed_images_folder,
+        output_metadata_folder,
+        patient_id,
+        spacing=spacing,
+        num_threads_preprocessing=num_threads_preprocessing,
+    )
 
 
 def main():
@@ -23,10 +45,17 @@ def main():
                         help="Output directory for image metadata", required=True)
 
     parser.add_argument("-np", "--nr_thr_preprocess", type=int,
-                        help="Nr of threads for preprocessing", default=4)
+                        help="Number of images to preprocess in parallel", default=4)
+
+    parser.add_argument("--nr_thr_resample", type=int,
+                        help="Threads used inside each image resampling job (set >1 only when using low -np)",
+                        default=1)
 
     args = parser.parse_args()
-    
+
+    os.makedirs(args.output_preprocessed_images_folder, exist_ok=True)
+    os.makedirs(args.output_metadata_folder, exist_ok=True)
+
     if str(args.input_folder).endswith("nii.gz"):
         input_images = [args.input_folder]
     else:
@@ -37,19 +66,24 @@ def main():
             if filename.endswith(".nii.gz")
         ]
     input_images.sort()
-    
+
     start = time.time()
-    # Loop images
-    for i, file_in in enumerate(input_images):
-        if os.path.basename(file_in)[-11:] == "0000.nii.gz":
-            patient_id = os.path.basename(file_in)[:-12]
-        else:
-            patient_id = os.path.basename(file_in)[:-7]
-        print("Preprocessing file {}/{}   ".format(i+1, len(input_images)), patient_id)
-        # Reorient to RAS, resampling to 1.5, remove rotation and translation
-        preprocess_nifti_and_save_to_dir(file_in, args.output_preprocessed_images_folder, args.output_metadata_folder, patient_id, spacing=1.5, num_threads_preprocessing=args.nr_thr_preprocess)
+    total_images = len(input_images)
+    Parallel(n_jobs=args.nr_thr_preprocess)(
+        delayed(_preprocess_single_image)(
+            file_in,
+            args.output_preprocessed_images_folder,
+            args.output_metadata_folder,
+            1.5,
+            args.nr_thr_resample,
+            total_images,
+            index,
+        )
+        for index, file_in in enumerate(input_images)
+    )
 
     print(f"Finished in {time.time() - start:.2f}s")
+
 
 if __name__ == "__main__":
     main()
