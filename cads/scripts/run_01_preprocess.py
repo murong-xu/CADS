@@ -69,7 +69,7 @@ def main():
 
     start = time.time()
     total_images = len(input_images)
-    Parallel(n_jobs=args.nr_thr_preprocess)(
+    Parallel(n_jobs=args.nr_thr_preprocess, prefer="threads")(
         delayed(_preprocess_single_image)(
             file_in,
             args.output_preprocessed_images_folder,

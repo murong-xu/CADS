@@ -67,7 +67,7 @@ def main():
             jobs.append((seg_file_path, file_out, metadata_orig))
 
     start = time.time()
-    Parallel(n_jobs=nr_thr_process)(
+    Parallel(n_jobs=nr_thr_process, prefer="threads")(
         delayed(_restore_single_segmentation)(
             seg_file_path,
             file_out,
