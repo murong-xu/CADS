@@ -95,12 +95,11 @@ class nnUNetv2Predictor():
             self.predict = self._nnUNetv2_predict
 
     @time_it
-    def _nnUNetv2_batch_predict(self, folder_in, folder_out):
+    def _nnUNetv2_batch_predict(self, files_in, files_out):
         """
         Identical to command nnUNetv2_predict, works for batch predictions (predicting many images at once), supposed to be faster.
         """
-        # This is suitable for processing a bunch of files, and will produce some side-files (predict_from_raw_data_args.json ...)
-        self.predictor.predict_from_files(folder_in, folder_out, save_probabilities=False,
+        self.predictor.predict_from_files(files_in, files_out, save_probabilities=False,
                                           overwrite=True,
                                           num_processes_preprocessing=self.num_threads_preprocessing,
                                           num_processes_segmentation_export=self.num_threads_nifti_save,
@@ -413,7 +412,7 @@ def predict(files_in, folder_out, model_folder, task_ids,
 def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids, 
             folds='all', use_cpu=False, postprocess_cads=True, 
             num_threads_preprocessing=4, nr_threads_saving=6, 
-            mode='auto', verbose=False):
+            mode='auto', verbose=False, batch_by_task=False):
     """
     Loop images and use nnUNetv2 models to predict. 
     """
@@ -432,86 +431,164 @@ def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids,
     # Init nnUNetv2 predictor
     models = {}
     for task_id in task_ids:
-        models[task_id] = nnUNetv2Predictor(model_folder, task_id, device_init, batch_predict=False, folds=folds, checkpoint='checkpoint_final.pth',
+        models[task_id] = nnUNetv2Predictor(model_folder, task_id, device_init, batch_predict=batch_by_task, folds=folds, checkpoint='checkpoint_final.pth',
                                             num_threads_preprocessing=num_threads_preprocessing, num_threads_nifti_save=nr_threads_saving, verbose=verbose)
 
-    # Loop images
-    for i, file_in in enumerate(files_in):
-        if os.path.basename(file_in)[-11:] == "0000.nii.gz":
-            patient_id = os.path.basename(file_in)[:-12]
-        else:
-            patient_id = os.path.basename(file_in)[:-7]
-        print("Predicting file {}/{}   ".format(i+1, len(files_in)), patient_id)
-        start = time.time()
+    if batch_by_task:
+        # Prepare output paths
+        patient_ids = []
+        output_dirs = []
+        files_by_task = {task_id: [] for task_id in task_ids}
+        files_in_batch = [[f] for f in files_in]
+        for file_in in files_in:
+            if os.path.basename(file_in)[-11:] == "0000.nii.gz":
+                patient_id = os.path.basename(file_in)[:-12]
+            else:
+                patient_id = os.path.basename(file_in)[:-7]
+            patient_ids.append(patient_id)
 
-        output_dir = os.path.join(folder_out, patient_id)
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir, exist_ok=True)
+            output_dir = os.path.join(folder_out, patient_id)
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir, exist_ok=True)
+            output_dirs.append(output_dir)
 
-        # Inference
+            for task_id in task_ids:
+                files_by_task[task_id].append(
+                    os.path.join(output_dir, patient_id + '_part_' + str(task_id) + '.nii.gz')
+                )
+
+        # Inference and post-processing task-by-task (batch prediction enables parallel export workers)
         for task_id in task_ids:
+            print(f"Predicting task {task_id} for {len(files_in)} file(s)")
+            task_start = time.time()
+            predict_only_start = time.time()
             try:
-                file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
                 with use_device(models[task_id], device_run, restore_to=device_init):
-                    models[task_id].predict(file_in, file_out)
-                    # models[task_id].predict([[file_in]], [file_out])  # for batch_predict
-
-                if postprocess_cads:
-                    try:
-                        if task_id in _do_outlier_postprocessing_groups:
-                            postprocess_seg_TPTBox(file_out, task_id, file_out)
-                        if task_id in [557, 558]:
-                            file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
-                            if not os.path.exists(file_seg_brain_group):
-                                print(f"Task {task_id} needs pre-segmentation from task 553, generating segmentations...")
-                                with use_device(models[553], device_run, restore_to=device_init):
-                                    # models[553].predict([[file_in]], [file_seg_brain_group])  # for batch_predict
-                                    models[553].predict(file_in, file_seg_brain_group)
-
-                            # For group 558, also need cervical vertebrae as reference
-                            if task_id == 558:
-                                file_seg_vertebrae_group = os.path.join(output_dir, patient_id+'_part_'+str(552)+'.nii.gz')
-                                # First check if brain exists and is sufficient
-                                if not postprocess_head_and_neck(task_id, file_seg_brain_group, None, file_out):
-                                    # Only predict vertebrae if brain check failed
-                                    if not os.path.exists(file_seg_vertebrae_group):
-                                        print(f"Task {task_id} needs pre-segmentation from task 552 (spine), generating segmentations...")
-                                        with use_device(models[552], device_run, restore_to=device_init):
-                                            # models[552].predict([[file_in]], [file_seg_vertebrae_group])  # for batch_predict
-                                            models[552].predict(file_in, file_seg_vertebrae_group)
-                                    postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
-                            else:
-                                postprocess_head(task_id, file_seg_brain_group, file_out)
-                    except Exception as e:
-                        error_log = os.path.join(output_dir, f"{patient_id}_ERROR.log")
-                        with open(error_log, 'a') as f:
-                            f.write(f"\n{'='*60}\n")
-                            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Postprocessing Error - Task {task_id}\n")
-                            f.write(f"{'='*60}\n")
-                            f.write(f"Error: {str(e)}\n\n")
-                            f.write("Traceback:\n")
-                            f.write(traceback.format_exc())
-                            f.write("\n")
-
-                        print(f"Warning: Postprocessing failed for task {task_id}: {e}")
-                        traceback.print_exc()
+                    models[task_id].predict(files_in_batch, files_by_task[task_id])
             except Exception as e:
-                error_log = os.path.join(output_dir, f"{patient_id}_ERROR.log")
-                with open(error_log, 'a') as f:
-                    f.write(f"\n{'='*60}\n")
-                    f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CRITICAL ERROR - Task {task_id} FAILED\n")
-                    f.write(f"{'='*60}\n")
-                    f.write(f"Error: {str(e)}\n\n")                
-                    f.write("Traceback:\n")
-                    f.write(traceback.format_exc())
-                    f.write("\n")
-                    f.write("    WARNING: Processing was interrupted. Remaining tasks and geometry restoration were not performed.\n")
-                    f.write("    Existing output files are in preprocessed format (1.5mm spacing), NOT original image geometry.\n")
-                    f.write("    Please fix the error and re-run to get outputs in original geometry.\n\n")
-
-                print(f"Error: Task {task_id} failed: {e}")
+                print(f"Error: Task {task_id} batch inference failed: {e}")
                 traceback.print_exc()
                 print(f"Skipping task {task_id} and continuing with remaining tasks...")
                 continue
+            predict_only_time = time.time() - predict_only_start
+            print(f"Task {task_id} nnUNet predict/export stage finished in {predict_only_time:.2f}s")
 
-        print(f"Finished in {time.time() - start:.2f}s")
+            if not postprocess_cads:
+                print(f"Finished task {task_id} in {time.time() - task_start:.2f}s")
+                continue
+
+            postprocess_start = time.time()
+            for i, patient_id in enumerate(patient_ids):
+                output_dir = output_dirs[i]
+                file_out = files_by_task[task_id][i]
+                try:
+                    if task_id in _do_outlier_postprocessing_groups:
+                        postprocess_seg_TPTBox(file_out, task_id, file_out)
+                    if task_id in [557, 558]:
+                        file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
+                        if not os.path.exists(file_seg_brain_group):
+                            raise FileNotFoundError(f"Missing dependency for task {task_id}: {file_seg_brain_group}")
+
+                        # For group 558, also need cervical vertebrae as reference
+                        if task_id == 558:
+                            file_seg_vertebrae_group = os.path.join(output_dir, patient_id+'_part_'+str(552)+'.nii.gz')
+                            if not postprocess_head_and_neck(task_id, file_seg_brain_group, None, file_out):
+                                if not os.path.exists(file_seg_vertebrae_group):
+                                    raise FileNotFoundError(f"Missing dependency for task {task_id}: {file_seg_vertebrae_group}")
+                                postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
+                        else:
+                            postprocess_head(task_id, file_seg_brain_group, file_out)
+                except Exception as e:
+                    error_log = os.path.join(output_dir, f"{patient_id}_ERROR.log")
+                    with open(error_log, 'a') as f:
+                        f.write(f"\n{'='*60}\n")
+                        f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Postprocessing Error - Task {task_id}\n")
+                        f.write(f"{'='*60}\n")
+                        f.write(f"Error: {str(e)}\n\n")
+                        f.write("Traceback:\n")
+                        f.write(traceback.format_exc())
+                        f.write("\n")
+                    print(f"Warning: Postprocessing failed for task {task_id} / {patient_id}: {e}")
+                    traceback.print_exc()
+            postprocess_time = time.time() - postprocess_start
+            print(f"Task {task_id} postprocessing stage finished in {postprocess_time:.2f}s")
+            print(f"Finished task {task_id} in {time.time() - task_start:.2f}s")
+    else:
+        # Original per-file execution path
+        for i, file_in in enumerate(files_in):
+            if os.path.basename(file_in)[-11:] == "0000.nii.gz":
+                patient_id = os.path.basename(file_in)[:-12]
+            else:
+                patient_id = os.path.basename(file_in)[:-7]
+            print("Predicting file {}/{}   ".format(i+1, len(files_in)), patient_id)
+            start = time.time()
+
+            output_dir = os.path.join(folder_out, patient_id)
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir, exist_ok=True)
+
+            for task_id in task_ids:
+                try:
+                    file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
+                    predict_only_start = time.time()
+                    with use_device(models[task_id], device_run, restore_to=device_init):
+                        models[task_id].predict(file_in, file_out)
+                    predict_only_time = time.time() - predict_only_start
+                    if verbose:
+                        print(f"[timing] {patient_id} task {task_id} nnUNet predict/export: {predict_only_time:.2f}s")
+
+                    if postprocess_cads:
+                        postprocess_start = time.time()
+                        try:
+                            if task_id in _do_outlier_postprocessing_groups:
+                                postprocess_seg_TPTBox(file_out, task_id, file_out)
+                            if task_id in [557, 558]:
+                                file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
+                                if not os.path.exists(file_seg_brain_group):
+                                    print(f"Task {task_id} needs pre-segmentation from task 553, generating segmentations...")
+                                    with use_device(models[553], device_run, restore_to=device_init):
+                                        models[553].predict(file_in, file_seg_brain_group)
+
+                                if task_id == 558:
+                                    file_seg_vertebrae_group = os.path.join(output_dir, patient_id+'_part_'+str(552)+'.nii.gz')
+                                    if not postprocess_head_and_neck(task_id, file_seg_brain_group, None, file_out):
+                                        if not os.path.exists(file_seg_vertebrae_group):
+                                            print(f"Task {task_id} needs pre-segmentation from task 552 (spine), generating segmentations...")
+                                            with use_device(models[552], device_run, restore_to=device_init):
+                                                models[552].predict(file_in, file_seg_vertebrae_group)
+                                        postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
+                                else:
+                                    postprocess_head(task_id, file_seg_brain_group, file_out)
+                        except Exception as e:
+                            error_log = os.path.join(output_dir, f"{patient_id}_ERROR.log")
+                            with open(error_log, 'a') as f:
+                                f.write(f"\n{'='*60}\n")
+                                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Postprocessing Error - Task {task_id}\n")
+                                f.write(f"{'='*60}\n")
+                                f.write(f"Error: {str(e)}\n\n")
+                                f.write("Traceback:\n")
+                                f.write(traceback.format_exc())
+                                f.write("\n")
+                            print(f"Warning: Postprocessing failed for task {task_id}: {e}")
+                            traceback.print_exc()
+                        if verbose:
+                            print(f"[timing] {patient_id} task {task_id} postprocessing: {time.time() - postprocess_start:.2f}s")
+                except Exception as e:
+                    error_log = os.path.join(output_dir, f"{patient_id}_ERROR.log")
+                    with open(error_log, 'a') as f:
+                        f.write(f"\n{'='*60}\n")
+                        f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CRITICAL ERROR - Task {task_id} FAILED\n")
+                        f.write(f"{'='*60}\n")
+                        f.write(f"Error: {str(e)}\n\n")
+                        f.write("Traceback:\n")
+                        f.write(traceback.format_exc())
+                        f.write("\n")
+                        f.write("    WARNING: Processing was interrupted. Remaining tasks and geometry restoration were not performed.\n")
+                        f.write("    Existing output files are in preprocessed format (1.5mm spacing), NOT original image geometry.\n")
+                        f.write("    Please fix the error and re-run to get outputs in original geometry.\n\n")
+                    print(f"Error: Task {task_id} failed: {e}")
+                    traceback.print_exc()
+                    print(f"Skipping task {task_id} and continuing with remaining tasks...")
+                    continue
+
+            print(f"Finished in {time.time() - start:.2f}s")
