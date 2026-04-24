@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import nibabel as nib
 from functools import partial
+from joblib import Parallel, delayed
 from p_tqdm import p_map
 import gc
 from contextlib import contextmanager
@@ -53,6 +54,30 @@ def cleanup_nnunet_sidecar_json(output_dirs):
                     os.remove(os.path.join(output_dir, filename))
                 except OSError:
                     pass
+
+
+def _postprocess_single_prediction(task_id, patient_id, output_dir, file_out):
+    try:
+        if task_id in _do_outlier_postprocessing_groups:
+            postprocess_seg_TPTBox(file_out, task_id, file_out)
+
+        if task_id in [557, 558]:
+            file_seg_brain_group = os.path.join(output_dir, patient_id + '_part_' + str(553) + '.nii.gz')
+            if not os.path.exists(file_seg_brain_group):
+                raise FileNotFoundError(f"Missing dependency for task {task_id}: {file_seg_brain_group}")
+
+            # For group 558, also need cervical vertebrae as reference
+            if task_id == 558:
+                file_seg_vertebrae_group = os.path.join(output_dir, patient_id + '_part_' + str(552) + '.nii.gz')
+                if not postprocess_head_and_neck(task_id, file_seg_brain_group, None, file_out):
+                    if not os.path.exists(file_seg_vertebrae_group):
+                        raise FileNotFoundError(f"Missing dependency for task {task_id}: {file_seg_vertebrae_group}")
+                    postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
+            else:
+                postprocess_head(task_id, file_seg_brain_group, file_out)
+        return None
+    except Exception:
+        return traceback.format_exc()
 
 
 def get_task_model_folder(task_id: int, model_folder: str):
@@ -435,7 +460,7 @@ def predict(files_in, folder_out, model_folder, task_ids,
 def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids, 
             folds='all', use_cpu=False, postprocess_cads=True, 
             num_threads_preprocessing=4, nr_threads_saving=6, 
-            mode='auto', verbose=False, batch_by_task=False):
+            mode='auto', verbose=False, batch_by_task=False, num_threads_postprocessing=1):
     """
     Loop images and use nnUNetv2 models to predict. 
     """
@@ -452,6 +477,8 @@ def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids,
     chosen_mode, device_init, device_run = setup_inference_devices(mode=mode, use_cpu=use_cpu, n_tasks=len(task_ids))
 
     # Init nnUNetv2 predictor
+    num_threads_postprocessing = max(1, int(num_threads_postprocessing))
+
     models = {}
     for task_id in task_ids:
         models[task_id] = nnUNetv2Predictor(model_folder, task_id, device_init, batch_predict=batch_by_task, folds=folds, checkpoint='checkpoint_final.pth',
@@ -502,38 +529,33 @@ def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids,
                 continue
 
             postprocess_start = time.time()
-            for i, patient_id in enumerate(patient_ids):
+            postprocess_errors = Parallel(n_jobs=num_threads_postprocessing)(
+                delayed(_postprocess_single_prediction)(
+                    task_id=task_id,
+                    patient_id=patient_id,
+                    output_dir=output_dirs[i],
+                    file_out=files_by_task[task_id][i],
+                )
+                for i, patient_id in enumerate(patient_ids)
+            )
+            for i, error_traceback in enumerate(postprocess_errors):
+                if error_traceback is None:
+                    continue
+                patient_id = patient_ids[i]
                 output_dir = output_dirs[i]
-                file_out = files_by_task[task_id][i]
                 try:
-                    if task_id in _do_outlier_postprocessing_groups:
-                        postprocess_seg_TPTBox(file_out, task_id, file_out)
-                    if task_id in [557, 558]:
-                        file_seg_brain_group = os.path.join(output_dir, patient_id+'_part_'+str(553)+'.nii.gz')
-                        if not os.path.exists(file_seg_brain_group):
-                            raise FileNotFoundError(f"Missing dependency for task {task_id}: {file_seg_brain_group}")
-
-                        # For group 558, also need cervical vertebrae as reference
-                        if task_id == 558:
-                            file_seg_vertebrae_group = os.path.join(output_dir, patient_id+'_part_'+str(552)+'.nii.gz')
-                            if not postprocess_head_and_neck(task_id, file_seg_brain_group, None, file_out):
-                                if not os.path.exists(file_seg_vertebrae_group):
-                                    raise FileNotFoundError(f"Missing dependency for task {task_id}: {file_seg_vertebrae_group}")
-                                postprocess_head_and_neck(task_id, file_seg_brain_group, file_seg_vertebrae_group, file_out)
-                        else:
-                            postprocess_head(task_id, file_seg_brain_group, file_out)
-                except Exception as e:
                     error_log = os.path.join(output_dir, f"{patient_id}_ERROR.log")
                     with open(error_log, 'a') as f:
                         f.write(f"\n{'='*60}\n")
                         f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Postprocessing Error - Task {task_id}\n")
                         f.write(f"{'='*60}\n")
-                        f.write(f"Error: {str(e)}\n\n")
+                        f.write("Error in parallel postprocessing worker.\n\n")
                         f.write("Traceback:\n")
-                        f.write(traceback.format_exc())
+                        f.write(error_traceback)
                         f.write("\n")
-                    print(f"Warning: Postprocessing failed for task {task_id} / {patient_id}: {e}")
-                    traceback.print_exc()
+                    print(f"Warning: Postprocessing failed for task {task_id} / {patient_id}. See {error_log}.")
+                except Exception as e:
+                    print(f"Warning: Failed writing postprocessing error log for task {task_id} / {patient_id}: {e}")
             postprocess_time = time.time() - postprocess_start
             print(f"Task {task_id} postprocessing stage finished in {postprocess_time:.2f}s")
             print(f"Finished task {task_id} in {time.time() - task_start:.2f}s")
