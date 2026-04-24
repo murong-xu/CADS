@@ -410,3 +410,49 @@ def restore_seg_in_orig_format_ctrate(file_seg, metadata_orig, num_threads_prepr
                                   affine_identity)
 
     nib.save(seg_restored, file_seg)
+
+
+def preprocess_nifti_and_save_to_dir(file_in, output_file_dir, output_metadata_dir, basename,spacing=1.5, num_threads_preprocessing=2):
+    raw_img = nib.load(file_in)
+    raw_img_numpy = raw_img.get_fdata()
+    
+    original_affine = raw_img.affine
+    original_spacing = np.diag(original_affine, k=0)[:3]
+    original_orientation = nio.ornt2axcodes(nio.io_orientation(original_affine))
+    original_x_size = raw_img_numpy.shape[0]
+    original_y_size = raw_img_numpy.shape[1]
+    original_z_size = raw_img_numpy.shape[2]
+
+    # If both spacing and orientation are correct, return original image
+    if np.all(np.isclose(original_spacing, spacing)) and original_orientation == ('R', 'A', 'S') and np.allclose(original_affine[:, -1], np.array([0, 0, 0, 1])):
+        print(f'Image {file_in} already has correct spacing and orientation. Skipping preprocessing.')
+        return None, file_in, None, False
+
+    else:
+        print(f'Preprocessing image {file_in}')
+        # Reorient to RAS
+        img_reoriented = reorient_to(raw_img_numpy, original_affine, axcodes_to=('R', 'A', 'S'), verb=True)
+
+        # Resampling to 1.5
+        img_resampled = change_spacing(img_reoriented, [spacing, spacing, spacing], order=3, dtype=np.int32, nr_cpus=num_threads_preprocessing)
+        
+        # Remove rotation & translation
+        affine_removed = remove_rotation_and_translation(img_resampled.affine)
+        img_removed = nib.Nifti1Image(img_resampled.get_fdata(), affine_removed)
+
+        # Create temp file path and save
+        nib.save(img_removed, os.path.join(output_file_dir, f'{basename}.nii.gz'))
+
+        metadata_orig = {
+            'affine': original_affine,
+            'spacing': original_spacing,
+            'x_size': original_x_size,
+            'y_size': original_y_size,
+            'z_size': original_z_size,
+        }
+        metadata_file = os.path.join(output_metadata_dir, f'{basename}_metadata.pkl')
+        with open(metadata_file, 'wb') as f:
+            pickle.dump(metadata_orig, f)
+            f.close()
+    
+    return True

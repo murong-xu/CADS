@@ -10,9 +10,10 @@
 1. [Overview](#overview)
 2. [Useful Links](#useful-links)
 3. [Installation](#installation)
-4. [Quick Start](#quick-start)
-5. [Target Structures in Each Task](#target-structures-in-each-task)
-6. [Citation](#citation)
+4. [Option 1: Quick Start](#option-1--quick-start-run-everything-in-one-command)
+5. [Option 2: Staged Pipeline](#option-2--staged-pipeline-recommended-for-large-scale-processing)
+6. [Target Structures in Each Task](#target-structures-in-each-task)
+7. [Citation](#citation)
 
 ## Overview
 <img src="resources/images/whole-body-parts-visualization.svg" alt="overview" width="100%">
@@ -69,7 +70,7 @@ pip install -e .
 # This warning is expected and can be safely ignored - it doesn't affect the functionality of CADS.
 ```
 
-## Quick Start
+## Option 1 — Quick Start (Run everything in one command)
 Example script for running inference:
 
 ```bash
@@ -80,7 +81,39 @@ python cads/scripts/predict_images.py \
                                   #   - "all": run all tasks
                                   #   - single task: choose from 551-559
                                   #   (see "Target Structures in Each Task" section below)
+    --cpu # Use this flag to run on CPU (by default, GPU is used if available).
 ```
+
+## Option 2 — Staged Pipeline (Recommended for large-scale processing)
+For large-scale processing of CT volumes (e.g., ~100–1000 scans or more), which can require more processing time, the full pipeline can be split into **standalone** stages to better utilize computational resources: **CPU** for CT preprocessing and segmentation restoration, and **GPU** for model inference. Intermediate outputs are saved to disk for use in subsequent stages.
+1. **Preprocess CT (CPU-only)** — `cads/scripts/run_01_preprocess.py`  
+   Reads raw CT NIfTI files, performs reorientation and resampling, and writes preprocessed images along with a small *_metadata.pkl file per case (required later for restoration).
+   ```bash
+   python cads/scripts/run_01_preprocess.py \
+    -in "/path/to/raw_ct_images" \  # Directory of raw CT nifti images
+    -out_preprocessed_img "/path/to/preprocessed" \  # Output directory for preprocessed images
+    -out_metadata "/path/to/metadata" \  # Output directory for image metadata
+    ```
+2. **Inference (GPU recommended)** — `cads/scripts/run_02_inference.py`  
+   Runs the CADS-model on **preprocessed** NIfTIs only. Set `-task` to `all` or a single id from 551–559. Outputs one folder per case with `_part_551`…`_part_559` segmentations in **preprocessed** space. Add `--cpu` if no GPU is available.
+   ```bash
+   python cads/scripts/run_02_inference.py \
+    -in_preprocessed_images "/path/to/preprocessed" \  # Directory of preprocessed CT NIfTI images
+    -out "/path/to/seg_in_preprocessed_space" \  # Output directory for segmentation masks
+    -task # Task ID options:
+         #   - "all": run all tasks
+         #   - single task: choose from 551-559
+         #   (see "Target Structures in Each Task" section below)
+    --cpu # Use this flag to run on CPU (by default, GPU is used if available).
+   ```
+3. **Restore segmentation to original image format (CPU-only)** — `cads/scripts/run_03_restore_seg.py`  
+   Uses the inference outputs (from step 2) and image metadata (from step 1) to restore segmentations to the **original** image geometry.
+   ```bash
+   python cads/scripts/run_03_restore_seg.py \
+    -in_seg "/path/to/seg_in_preprocessed_space" \
+    -in_metadata "/path/to/metadata" \
+    -out_seg "/path/to/seg_in_original_space" \  # Output segmentation masks in original image geometry
+   ```
 
 ## Target Structures in Each Task
 Each task ID (model 551-559) represents a specific anatomical group. For detailed indexing please refer to [model labelmap](resources/info/labelmap.md).
