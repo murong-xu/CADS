@@ -48,12 +48,13 @@ def cleanup_nnunet_sidecar_json(output_dirs):
     for output_dir in output_dirs:
         if not os.path.isdir(output_dir):
             continue
-        for filename in os.listdir(output_dir):
-            if filename in NNUNET_SIDECAR_FILENAMES:
-                try:
-                    os.remove(os.path.join(output_dir, filename))
-                except OSError:
-                    pass
+        for root, _, files in os.walk(output_dir):
+            for filename in files:
+                if filename in NNUNET_SIDECAR_FILENAMES:
+                    try:
+                        os.remove(os.path.join(root, filename))
+                    except OSError:
+                        pass
 
 
 def _postprocess_single_prediction(task_id, patient_id, output_dir, file_out):
@@ -522,7 +523,7 @@ def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids,
                 continue
             predict_only_time = time.time() - predict_only_start
             print(f"Task {task_id} nnUNet predict/export stage finished in {predict_only_time:.2f}s")
-            cleanup_nnunet_sidecar_json(output_dirs)
+            cleanup_nnunet_sidecar_json([folder_out] + output_dirs)
 
             if not postprocess_cads:
                 print(f"Finished task {task_id} in {time.time() - task_start:.2f}s")
