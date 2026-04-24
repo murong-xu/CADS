@@ -530,7 +530,7 @@ def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids,
                 continue
 
             postprocess_start = time.time()
-            postprocess_errors = Parallel(n_jobs=num_threads_postprocessing)(
+            postprocess_errors = Parallel(n_jobs=num_threads_postprocessing, prefer="threads")(
                 delayed(_postprocess_single_prediction)(
                     task_id=task_id,
                     patient_id=patient_id,

@@ -84,7 +84,7 @@ def resample_img(img, zoom=0.5, order=0, nr_cpus=-1):
         img = img[..., None]
 
     nr_cpus = psutil.cpu_count() if nr_cpus == -1 else nr_cpus
-    img_sm = Parallel(n_jobs=nr_cpus)(delayed(_process_gradient)(grad_idx) for grad_idx in range(img.shape[3]))
+    img_sm = Parallel(n_jobs=nr_cpus, prefer="threads")(delayed(_process_gradient)(grad_idx) for grad_idx in range(img.shape[3]))
     img_sm = np.array(img_sm).transpose(1, 2, 3, 0)  # grads channel was in front -> put to back
     # Remove added dimensions
     # img_sm = img_sm[:,:,:,0] if img_sm.shape[3] == 1 else img_sm  # remove channel dim if only 1 element
