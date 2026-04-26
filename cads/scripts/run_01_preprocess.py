@@ -47,9 +47,6 @@ def main():
     parser.add_argument("-np", "--nr_thr_preprocess", type=int,
                         help="Number of images to preprocess in parallel", default=4)
 
-    parser.add_argument("--nr_thr_resample", type=int,
-                        help="Threads used inside each image resampling job (set >1 only when using low -np)",
-                        default=1)
 
     args = parser.parse_args()
 
@@ -75,7 +72,7 @@ def main():
             args.output_preprocessed_images_folder,
             args.output_metadata_folder,
             1.5,
-            args.nr_thr_resample,
+            1,
             total_images,
             index,
         )
