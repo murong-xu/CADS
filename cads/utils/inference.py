@@ -285,13 +285,8 @@ def predict(files_in, folder_out, model_folder, task_ids,
     labelmap_all_structure_inv = {v: k for k,
                                   v in labelmap_all_structure.items()}
 
-    # Ensure task_ids include dependencies
+    # Keep only user-requested task IDs; dependency tasks are handled on demand per case.
     task_ids = list(sorted(task_ids))
-    if any(t in task_ids for t in (557, 558)) and 553 not in task_ids:
-        task_ids.append(553)
-    if 558 in task_ids and 552 not in task_ids:
-        task_ids.append(552)
-    task_ids.sort()
 
     # Setup device and inference mode
     chosen_mode, device_init, device_run = setup_inference_devices(mode=mode, use_cpu=use_cpu, n_tasks=len(task_ids))
@@ -466,13 +461,8 @@ def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids,
     Loop images and use nnUNetv2 models to predict. 
     """
 
-    # Ensure task_ids include dependencies
+    # Keep only user-requested task IDs; dependency tasks are handled on demand per case.
     task_ids = list(sorted(task_ids))
-    if any(t in task_ids for t in (557, 558)) and 553 not in task_ids:
-        task_ids.append(553)
-    if 558 in task_ids and 552 not in task_ids:
-        task_ids.append(552)
-    task_ids.sort()
 
     # Setup device and inference mode
     chosen_mode, device_init, device_run = setup_inference_devices(mode=mode, use_cpu=use_cpu, n_tasks=len(task_ids))
@@ -507,6 +497,37 @@ def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids,
                 files_by_task[task_id].append(
                     os.path.join(output_dir, patient_id + '_part_' + str(task_id) + '.nii.gz')
                 )
+
+        # Ensure dependency segmentations exist (case-by-case) before running dependent tasks.
+        if postprocess_cads:
+            def _ensure_dependency_task(dep_task_id, required_by_tasks):
+                if not any(t in task_ids for t in required_by_tasks):
+                    return
+                missing_indices = []
+                missing_inputs = []
+                missing_outputs = []
+                for idx, patient_id in enumerate(patient_ids):
+                    dep_out = os.path.join(output_dirs[idx], patient_id + '_part_' + str(dep_task_id) + '.nii.gz')
+                    if not os.path.isfile(dep_out):
+                        missing_indices.append(idx)
+                        missing_inputs.append(files_in_batch[idx])
+                        missing_outputs.append(dep_out)
+                if not missing_inputs:
+                    print(f"All dependency outputs for task {dep_task_id} already exist; skipping.")
+                    return
+                if dep_task_id not in models:
+                    models[dep_task_id] = nnUNetv2Predictor(
+                        model_folder, dep_task_id, device_init, batch_predict=True, folds=folds,
+                        checkpoint='checkpoint_final.pth', num_threads_preprocessing=num_threads_preprocessing,
+                        num_threads_nifti_save=nr_threads_saving, verbose=verbose
+                    )
+                print(f"Dependency check: task {dep_task_id} missing for {len(missing_inputs)} case(s); generating now.")
+                with use_device(models[dep_task_id], device_run, restore_to=device_init):
+                    models[dep_task_id].predict(missing_inputs, missing_outputs)
+                cleanup_nnunet_sidecar_json([folder_out] + output_dirs)
+
+            _ensure_dependency_task(553, (557, 558))
+            _ensure_dependency_task(552, (558,))
 
         # Inference and post-processing task-by-task (batch prediction enables parallel export workers)
         for task_id in task_ids:
