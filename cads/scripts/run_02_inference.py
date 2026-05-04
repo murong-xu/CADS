@@ -60,10 +60,20 @@ def main():
 
     parser.add_argument("-ns", "--nr_thr_saving", type=int,
                         help="Nr of threads for saving segmentations", default=4)
+    
+    parser.add_argument("-npost", "--nr_thr_postprocess", type=int,
+                        help="Nr of patients to postprocess in parallel (used with --batch-by-task)", default=1)
 
     parser.add_argument("--verbose", action="store_true",
                         help="Show more intermediate output", default=False)
 
+    parser.add_argument(
+        "--batch-by-task",
+        action="store_true",
+        default=False,
+        help="Experimental: predict all patients for each task in a single nnUNet batch call.",
+    )
+    
     args = parser.parse_args()
 
     folds = 'all'
@@ -92,7 +102,8 @@ def main():
 
     task_ids.sort()
     predict_preprocessed_images(input_images, output_seg_folder, model_folder, task_ids, folds=folds, use_cpu=args.cpu,
-        postprocess_cads=args.postprocessing, num_threads_preprocessing=args.nr_thr_preprocess, nr_threads_saving=args.nr_thr_saving, mode='auto', verbose=args.verbose)
+        postprocess_cads=args.postprocessing, num_threads_preprocessing=args.nr_thr_preprocess, nr_threads_saving=args.nr_thr_saving,
+        mode='auto', verbose=args.verbose, batch_by_task=args.batch_by_task, num_threads_postprocessing=args.nr_thr_postprocess)
 
 
 if __name__ == "__main__":
