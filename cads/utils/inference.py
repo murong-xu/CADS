@@ -456,7 +456,8 @@ def predict(files_in, folder_out, model_folder, task_ids,
 def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids, 
             folds='all', use_cpu=False, postprocess_cads=True, 
             num_threads_preprocessing=4, nr_threads_saving=6, 
-            mode='auto', verbose=False, batch_by_task=False, num_threads_postprocessing=1):
+            mode='auto', verbose=False, batch_by_task=False, num_threads_postprocessing=1,
+            skip_existing=False):
     """
     Loop images and use nnUNetv2 models to predict. 
     """
@@ -531,12 +532,31 @@ def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids,
 
         # Inference and post-processing task-by-task (batch prediction enables parallel export workers)
         for task_id in task_ids:
-            print(f"Predicting task {task_id} for {len(files_in)} file(s)")
+            task_inputs = files_in_batch
+            task_outputs = files_by_task[task_id]
+            task_patient_ids = patient_ids
+            task_output_dirs = output_dirs
+
+            if skip_existing:
+                pending = [
+                    (fi, fo, pid, od)
+                    for fi, fo, pid, od in zip(task_inputs, task_outputs, task_patient_ids, task_output_dirs)
+                    if not os.path.isfile(fo)
+                ]
+                if not pending:
+                    print(f"Skipping task {task_id}: all outputs already exist.")
+                    continue
+                task_inputs = [p[0] for p in pending]
+                task_outputs = [p[1] for p in pending]
+                task_patient_ids = [p[2] for p in pending]
+                task_output_dirs = [p[3] for p in pending]
+
+            print(f"Predicting task {task_id} for {len(task_inputs)} file(s)")
             task_start = time.time()
             predict_only_start = time.time()
             try:
                 with use_device(models[task_id], device_run, restore_to=device_init):
-                    models[task_id].predict(files_in_batch, files_by_task[task_id])
+                    models[task_id].predict(task_inputs, task_outputs)
             except Exception as e:
                 print(f"Error: Task {task_id} batch inference failed: {e}")
                 traceback.print_exc()
@@ -555,16 +575,16 @@ def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids,
                 delayed(_postprocess_single_prediction)(
                     task_id=task_id,
                     patient_id=patient_id,
-                    output_dir=output_dirs[i],
-                    file_out=files_by_task[task_id][i],
+                    output_dir=task_output_dirs[i],
+                    file_out=task_outputs[i],
                 )
-                for i, patient_id in enumerate(patient_ids)
+                for i, patient_id in enumerate(task_patient_ids)
             )
             for i, error_traceback in enumerate(postprocess_errors):
                 if error_traceback is None:
                     continue
-                patient_id = patient_ids[i]
-                output_dir = output_dirs[i]
+                patient_id = task_patient_ids[i]
+                output_dir = task_output_dirs[i]
                 try:
                     error_log = os.path.join(output_dir, f"{patient_id}_ERROR.log")
                     with open(error_log, 'a') as f:
@@ -598,6 +618,9 @@ def predict_preprocessed_images(files_in, folder_out, model_folder, task_ids,
             for task_id in task_ids:
                 try:
                     file_out = os.path.join(output_dir, patient_id+'_part_'+str(task_id)+'.nii.gz')
+                    if skip_existing and os.path.isfile(file_out):
+                        print(f"Skipping {patient_id} task {task_id}: output exists.")
+                        continue
                     predict_only_start = time.time()
                     with use_device(models[task_id], device_run, restore_to=device_init):
                         models[task_id].predict(file_in, file_out)
