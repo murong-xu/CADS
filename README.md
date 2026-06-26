@@ -13,7 +13,9 @@
 4. [Option 1: Quick Start](#option-1--quick-start-run-everything-in-one-command)
 5. [Option 2: Staged Pipeline](#option-2--staged-pipeline-recommended-for-large-scale-processing)
 6. [Target Structures in Each Task](#target-structures-in-each-task)
-7. [Citation](#citation)
+7. [Other Resources for Download](#other-resources-for-download)
+8. [License](#license)
+9. [Citation](#citation)
 
 ## Overview
 <img src="resources/images/whole-body-parts-visualization.svg" alt="overview" width="100%">
@@ -144,6 +146,12 @@ Carotid artery R/L, Arytenoid cartilage, Mandible, Brain stem, Buccal mucosa, Or
 
 **Task 559: General tissue types, major body cavities, broad anatomical categories**
 Subcutaneous tissue, Muscle, Abdominopelvic cavity, Thoracic cavity, Bone structure, Gland structure, Pericardium, Breast implant, Mediastinum, Spinal cord.
+
+## Other Resources for Download
+
+Additional resources released with the CADS manuscript are available here:
+
+- **Expert Review and Corrected Label Subset on TotalSegmentator Data**: Radiologist review records for the 65 held-out TotalSegmentator test cases used in the CADS study, together with manually corrected labels used for the corrected mini-benchmark. [[Download]](https://drive.switch.ch/index.php/s/pc9mJaYLzoYSfwe)
 
 ## License
 
