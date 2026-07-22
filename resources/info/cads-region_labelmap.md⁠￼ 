@@ -1,0 +1,285 @@
+# Model Labelmaps for CADS-region
+
+<details open>
+<summary><strong>Model 601</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | Carotid artery L |
+| 2     | Carotid artery R |
+| 3     | Arytenoid cartilage |
+| 4     | Mandible |
+| 5     | Brainstem |
+| 6     | Buccal mucosa |
+| 7     | Oral cavity |
+| 8     | Cochlear L |
+| 9     | Cochlear R |
+| 10     | Cricopharyngeus |
+| 11     | Cervical esophagus |
+| 12     | Anterior eyeball segment L |
+| 13     | Anterior eyeball segment R |
+| 14     | Posterior eyeball segment L |
+| 15     | Posterior eyeball segment R |
+| 16     | Lacrimal gland L |
+| 17     | Lacrimal gland R |
+| 18     | Submandibular gland L |
+| 19     | Submandibular gland R |
+| 20     | Thyroid |
+| 21     | Glottis |
+| 22     | Supraglottis |
+| 23     | Both lips |
+| 24     | Optic chiasm |
+| 25     | Optic nerve L |
+| 26     | Optic nerve R |
+| 27     | Parotid gland L |
+| 28     | Parotid gland R |
+| 29     | Pituitary gland |
+
+</details>
+
+<details open>
+<summary><strong>Model 602</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | White matter |
+| 2     | Gray matter |
+| 3     | Cerebrospinal fluid |
+| 4     | Scalp |
+| 5     | Eyeball |
+| 6     | Compact bone |
+| 7     | Spongy bone |
+| 8     | Blood |
+| 9     | Muscle of head |
+
+</details>
+
+<details open>
+<summary><strong>Model 603</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | Subcutaneous tissue |
+| 2     | Muscle |
+| 3     | Abdominal cavity |
+| 4     | Thoracic cavity |
+| 5     | Bones |
+| 6     | Gland structure |
+| 7     | Pericardium |
+| 8     | Prosthetic breast implant |
+| 9     | Mediastinum |
+| 10    | Spinal cord |
+
+</details>
+
+<details open>
+<summary><strong>Model 604</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | lung_upper_lobe_left |
+| 2     | lung_lower_lobe_left |
+| 3     | lung_upper_lobe_right |
+| 4     | lung_middle_lobe_right |
+| 5     | lung_lower_lobe_right |
+| 6     | esophagus |
+| 7     | trachea |
+
+</details>
+
+<details open>
+<summary><strong>Model 605</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | heart_myocardium |
+| 2     | heart_atrium_left |
+| 3     | heart_ventricle_left |
+| 4     | heart_atrium_right |
+| 5     | heart_ventricle_right |
+| 6     | pulmonary_artery |
+
+</details>
+
+<details open>
+<summary><strong>Model 606</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | spleen |
+| 2     | kidney_right |
+| 3     | kidney_left |
+| 4     | gallbladder |
+| 5     | liver |
+| 6     | stomach |
+| 7     | aorta |
+| 8     | inferior_vena_cava |
+| 9     | portal_vein_and_splenic_vein |
+| 10     | pancreas |
+| 11     | adrenal_gland_right |
+| 12     | adrenal_gland_left |
+| 13     | small_bowel |
+| 14     | duodenum |
+| 15     | colon |
+
+</details>
+
+<details open>
+<summary><strong>Model 607</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | iliac_artery_left |
+| 2     | iliac_artery_right |
+| 3     | iliac_vena_left |
+| 4     | iliac_vena_right |
+| 5     | urinary_bladder |
+| 6     | sigmoid |
+| 7     | rectum |
+| 8     | prostate |
+| 9     | seminal_vesicle |
+
+</details>
+
+<details open>
+<summary><strong>Model 608</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | vertebrae_L5 |
+| 2     | vertebrae_L4 |
+| 3     | vertebrae_L3 |
+| 4     | vertebrae_L2 |
+| 5     | vertebrae_L1 |
+| 6     | vertebrae_T12 |
+| 7     | vertebrae_T11 |
+| 8     | vertebrae_T10 |
+| 9     | vertebrae_T9 |
+| 10     | vertebrae_T8 |
+| 11     | vertebrae_T7 |
+| 12     | vertebrae_T6 |
+| 13     | vertebrae_T5 |
+| 14     | vertebrae_T4 |
+| 15     | vertebrae_T3 |
+| 16     | vertebrae_T2 |
+| 17     | vertebrae_T1 |
+| 18     | vertebrae_C7 |
+| 19     | vertebrae_C6 |
+| 20     | vertebrae_C5 |
+| 21     | vertebrae_C4 |
+| 22     | vertebrae_C3 |
+| 23     | vertebrae_C2 |
+| 24     | vertebrae_C1 |
+| 25     | sacrum |
+| 26     | spinal_canal |
+
+</details>
+
+<details open>
+<summary><strong>Model 609</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | rib_left_1 |
+| 2     | rib_left_2 |
+| 3     | rib_left_3 |
+| 4     | rib_left_4 |
+| 5     | rib_left_5 |
+| 6     | rib_left_6 |
+| 7     | rib_left_7 |
+| 8     | rib_left_8 |
+| 9     | rib_left_9 |
+| 10     | rib_left_10 |
+| 11     | rib_left_11 |
+| 12     | rib_left_12 |
+| 13     | rib_right_1 |
+| 14     | rib_right_2 |
+| 15     | rib_right_3 |
+| 16     | rib_right_4 |
+| 17     | rib_right_5 |
+| 18     | rib_right_6 |
+| 19     | rib_right_7 |
+| 20     | rib_right_8 |
+| 21     | rib_right_9 |
+| 22     | rib_right_10 |
+| 23     | rib_right_11 |
+| 24     | rib_right_12 |
+| 25     | sternum |
+
+</details>
+
+<details open>
+<summary><strong>Model 610</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | humerus_left |
+| 2     | humerus_right |
+| 3     | scapula_left |
+| 4     | scapula_right |
+| 5     | clavicula_left |
+| 6     | clavicula_right |
+| 7     | femur_left |
+| 8     | femur_right |
+| 9     | hip_left |
+| 10     | hip_right |
+
+</details>
+
+<details open>
+<summary><strong>Model 611</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | gluteus_maximus_left |
+| 2     | gluteus_maximus_right |
+| 3     | gluteus_medius_left |
+| 4     | gluteus_medius_right |
+| 5     | gluteus_minimus_left |
+| 6     | gluteus_minimus_right |
+| 7     | autochthon_left |
+| 8     | autochthon_right |
+| 9     | iliopsoas_left |
+| 10     | iliopsoas_right |
+
+</details>
+
+<details open>
+<summary><strong>Model 612</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | right psoas major |
+| 2     | left psoas major |
+| 3     | right rectus abdominis |
+| 4     | left rectus abdominis |
+
+</details>
+
+<details open>
+<summary><strong>Model 613</strong></summary>
+
+| Index | Structure Name |
+|-------|----------------|
+| 0     | Background     |
+| 1     | brain |
+| 2     | face |
+| 3     | larynx |
+| 4     | heart |
+| 5     | bowel_bag |
+| 6     | left_mammary_gland |
+| 7     | right_mammary_gland |
+
+</details>
