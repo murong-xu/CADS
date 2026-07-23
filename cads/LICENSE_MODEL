@@ -1,6 +1,6 @@
 CADS Model Weight Licenses
 
-CADS releases three pretrained model-weight variants. All variants use the same CADS network architecture, nine-task grouping (T551-T559), and 167 anatomical target structures. They differ in the training data sources included and therefore in the license terms that apply to the released weights.
+CADS releases three license-stratified pretrained model-weight variants and one anatomy-driven CADS-region model suite. The license-stratified variants use the same CADS network architecture, nine-task grouping (T551-T559), and 167 anatomical target structures, but differ in the training data sources included and therefore in the license terms that apply to the released weights. CADS-region reorganizes the same 167 structures into region-specific tasks and is distributed under the same CADS customized model license as the reference model.
 
 This file describes the model weights only. The source code license is provided separately in the repository LICENSE file.
 
@@ -17,6 +17,12 @@ Variant summary
 - CADS-model-open, CLI name: open
   License: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0).
   Intended use: users who need a model-weight license that permits redistribution of derived weights, including commercial use, under share-alike terms. This variant was trained on a smaller license-compatible corpus, and performance may be degraded for some detailed head-and-neck organ-at-risk structures due to the lack of some training data.
+
+Region model suite
+
+- CADS-region
+  License: CADS customized model license, same as the reference CADS-model.
+  Intended use: anatomy-driven deployment by field of view or downstream analysis. CADS-region reorganizes the complete 167-structure CADS target space into region-specific segmentation tasks (T601-T613), including chest, abdomen, spine, head-and-neck, musculoskeletal, vascular, organ, and body-composition segmentation.
 
 Detailed variant descriptions
 
@@ -61,6 +67,15 @@ After data filtering, the maximum training set size across the nine tasks is 13,
 To enable release under this more permissive license, CADS-model-open was trained on a smaller corpus than CADS-model-research and the customized-license reference CADS-model. Performance may therefore be degraded for some detailed head-and-neck organ-at-risk structures due to the lack of some training data in the CC BY-SA-compatible training subset.
 
 Users who require the strongest available performance for detailed head-and-neck structures should consider CADS-model-research or the customized-license reference CADS-model, subject to their respective license requirements.
+
+4. CADS-region
+
+CADS-region is an anatomy-driven model suite that reorganizes the complete CADS target space into 13 region-specific segmentation tasks (T601-T613) based on the SNOMED-aligned CADS hierarchy and ontology. It provides a complementary interface to the reference CADS-model for practical deployment by anatomical field of view or intended downstream analysis.
+
+CADS-region uses the same nnU-Net configuration and the same curated 167-structure label space as the reference CADS-model. It differs primarily in how target structures are grouped across tasks.
+
+CADS-region is distributed under the same CADS customized model license as the reference CADS-model. Please refer to the CADS-model release for the complete license terms and usage requirements.
+
 
 License text links
 

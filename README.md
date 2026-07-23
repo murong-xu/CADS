@@ -3,8 +3,8 @@
 # CADS : A Comprehensive Anatomical Dataset and Segmentation for Whole-Body Anatomy in Computed Tomography
 
 ## News
-- [July 2026] New model variants are now available! We've introduced licensing-stratified options to provide more flexibility for different use cases. For more details, please see the [Model Variants](#model-variants) section.
-- [July 2026] Updated model weights and paper preprint, please refer to the [Useful Links](#useful-links) section below!
+- [July 2026] New model variants are now available! We've introduced licensing-stratified options and the anatomy-driven CADS-region model suite to provide more flexibility for different use cases. For more details, please see the [Model Variants](#model-variants) section.
+- [July 2025] Updated model weights and paper preprint, please refer to the [Useful Links](#useful-links) section below!
 - [March 2025] Model weights and paper preprint coming soon!
 
 ## Table of Contents
@@ -76,11 +76,13 @@ pip install -e .
 
 ## Model Variants
 
-CADS provides three pretrained model-weight variants. They use the same architecture, task grouping, and 167 target structures, but differ in the licensed training data sources.
+CADS provides three license-stratified pretrained model-weight variants. They use the same architecture, task grouping, and 167 target structures, but differ in the licensed training data sources.
 
 - **`reference`**: CADS customized model license. Intended for reproducing the reference CADS-model and manuscript results, or for users who specifically need the model trained on the full CADS data-source collection.
 - **`research`**: CC BY-NC-SA 4.0. Recommended for most academic and non-commercial research use, with performance nearly identical to the reference model in the reported evaluation.
 - **`open`**: CC BY-SA 4.0. Intended for users who need a model-weight license permitting redistribution of derived weights, including commercial use, under share-alike terms. Performance may be degraded for some detailed head-and-neck structures.
+
+CADS also provides **`CADS-region`**, an anatomy-driven model suite that reorganizes the same 167 structures into region-specific tasks for practical deployment by anatomical field of view or downstream analysis. CADS-region is distributed under the same CADS customized model license as the reference model and is available from the [CADS-region release](https://github.com/murong-xu/CADS/releases/tag/cads-model-region_v1.0.0). For the complete label map and target list for each task, please refer to [cads-region_labelmap](https://github.com/murong-xu/CADS/blob/main/resources/info/cads-region_labelmap.md).
 
 For details about the licensing terms and model differences, see [cads/LICENSE_MODEL](cads/LICENSE_MODEL) and the [CADS model releases](https://github.com/murong-xu/CADS/releases).
 
@@ -173,7 +175,7 @@ Additional resources released with the CADS manuscript are available here:
 ## License
 
 - **Codebase** (the `cads` package and all source code in this repository) is licensed under the [Apache License 2.0](LICENSE).
-- **Model weights** are released in three variants: `reference` under the CADS customized model license, `research` under CC BY-NC-SA 4.0, and `open` under CC BY-SA 4.0. See [cads/LICENSE_MODEL](cads/LICENSE_MODEL) for details.
+- **Model weights** include three license-stratified variants: `reference` under the CADS customized model license, `research` under CC BY-NC-SA 4.0, and `open` under CC BY-SA 4.0. CADS-region is released separately under the same CADS customized model license as `reference`. See [cads/LICENSE_MODEL](cads/LICENSE_MODEL) for details.
 
 ## Citation
 If you use any component of CADS (CADS-dataset, its curated segmentation masks, pretrained CADS-model, or the 3D Slicer extension), please cite:
