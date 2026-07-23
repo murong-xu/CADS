@@ -43,17 +43,63 @@ def nostdout(verbose=False):
         yield
 
 
-def get_model_weights_dir():
+# -----------------------------------------------------------------------------
+# License-stratified model variants.
+#
+# Each variant has its own GitHub release. 
+# The default ('reference') is the original model. 
+# The other variants will be stored in their own subfolder.
+# -----------------------------------------------------------------------------
+DEFAULT_LICENSE = "reference"
+
+MODEL_LICENSES = {
+    "reference": {"release": "cads-model_v1.0.0", "subdir": "reference", "license": "customized"},
+    "research": {"release": "cads-model-research_v1.0.0", "subdir": "research", "license": "CC BY-NC-SA 4.0"},
+    "open": {"release": "cads-model-open_v1.0.0", "subdir": "open", "license": "CC BY-SA 4.0"},
+}
+
+GITHUB_RELEASE_BASE = "https://github.com/murong-xu/CADS/releases/download"
+
+# Dataset folder names are shared across all variants (same task ids).
+DATASET_FOLDERS = {
+    551: "Dataset551_Totalseg251",
+    552: "Dataset552_Totalseg252",
+    553: "Dataset553_Totalseg253",
+    554: "Dataset554_Totalseg254",
+    555: "Dataset555_Totalseg255",
+    556: "Dataset556_GC256",
+    557: "Dataset557_Brain257",
+    558: "Dataset558_OAR258",
+    559: "Dataset559_Saros259",
+}
+
+def get_model_weights_dir(license=DEFAULT_LICENSE):
     if "CADS_WEIGHTS_PATH" in os.environ:
-        model_dir = Path(os.environ["CADS_WEIGHTS_PATH"])
+        base_dir = Path(os.environ["CADS_WEIGHTS_PATH"])
     else:
         codebase_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        model_dir = Path(codebase_dir) / 'cads' / 'model_weights'
+        base_dir = Path(codebase_dir) / 'cads' / 'model_weights'
+
+    subdir = MODEL_LICENSES[license]["subdir"]
+    model_dir = base_dir / subdir if subdir else base_dir
+
+    # move the old reference model weights into the subfolder
+    if license == "reference" and subdir == "reference":
+        if not model_dir.exists() or not any(model_dir.iterdir()):
+            # check if the base_dir contains the old reference model weights
+            old_datasets = list(base_dir.glob("Dataset55*"))
+            if old_datasets:
+                print(f"Restructuring CADS reference weights into subfolder: {model_dir}")
+                model_dir.mkdir(parents=True, exist_ok=True)
+                for folder in old_datasets:
+                    if folder.resolve() != model_dir.resolve():
+                        shutil.move(str(folder), str(model_dir))
+
     model_dir.mkdir(parents=True, exist_ok=True)
     return str(model_dir)
 
-def setup_nnunet_env():
-    weights_dir = get_model_weights_dir()
+def setup_nnunet_env(license=DEFAULT_LICENSE):
+    weights_dir = get_model_weights_dir(license)
 
     os.environ["nnUNet_raw"] = str(weights_dir)  # not needed, placeholder
     os.environ["nnUNet_preprocessed"] = str(weights_dir)  # not needed, placeholder
@@ -63,27 +109,18 @@ def setup_nnunet_env():
     # TODO: check the 557 models if can fix the issue and enable compile again
     os.environ["nnUNet_compile"] = "f"
 
-def check_or_download_model_weights(task_id):
-    weights_dir = Path(get_model_weights_dir())
+def check_or_download_model_weights(task_id, license=DEFAULT_LICENSE):
+    weights_dir = Path(get_model_weights_dir(license))
     weights_dir.mkdir(parents=True, exist_ok=True)
-    # CADS-model v1.0.0
-    weights_info = {
-        551: ("Dataset551_Totalseg251", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset551_Totalseg251.zip"),
-        552: ("Dataset552_Totalseg252", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset552_Totalseg252.zip"),
-        553: ("Dataset553_Totalseg253", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset553_Totalseg253.zip"),
-        554: ("Dataset554_Totalseg254", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset554_Totalseg254.zip"),
-        555: ("Dataset555_Totalseg255", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset555_Totalseg255.zip"),
-        556: ("Dataset556_GC256", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset556_GC256.zip"),
-        557: ("Dataset557_Brain257", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset557_Brain257.zip"),
-        558: ("Dataset558_OAR258", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset558_OAR258.zip"),
-        559: ("Dataset559_Saros259", "https://github.com/murong-xu/CADS/releases/download/cads-model_v1.0.0/Dataset559_Saros259.zip"),
-    }
-    
-    folder_name, url = weights_info[task_id]
+
+    folder_name = DATASET_FOLDERS[task_id]
+    release = MODEL_LICENSES[license]["release"]
+    license_name = MODEL_LICENSES[license]["license"]
+    url = f"{GITHUB_RELEASE_BASE}/{release}/{folder_name}.zip"
     weights_path = weights_dir / folder_name
-    
+
     if not os.path.exists(weights_path):
-        print(f"Downloading model for Task {task_id} ...")
+        print(f"Downloading {release} ({license_name} licensed) for Task {task_id} ...")
 
         tempfile = weights_dir / f"tmp_download_file_{task_id}.zip"
         try:

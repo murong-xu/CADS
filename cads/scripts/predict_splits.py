@@ -1,13 +1,12 @@
 import argparse
 import torch
 import os
+import warnings
+warnings.filterwarnings("ignore", message=".*weights_only=False.*", category=FutureWarning)
 
 from cads.utils.libs import setup_nnunet_env
-setup_nnunet_env()
-from cads.utils.inference import predict
 from cads.dataset_utils.select_files import select_imgs
 from cads.dataset_utils.bodyparts_labelmaps import labelmap_all_structure
-from cads.utils.libs import get_model_weights_dir, check_or_download_model_weights
 
 def check_input_task(value):
     valid_numbers = {551, 552, 553, 554, 555, 556, 557, 558, 559}
@@ -67,6 +66,19 @@ def main():
                     dest='postprocessing',
                     help='Disable CADS postprocessing')
 
+    parser.add_argument(
+        "-license",
+        choices=["reference", "research", "open"],
+        default="reference",
+        help=(
+            "Model variant to use. Available options: "
+            "'reference' (Default; paper reference model,  license, trained on full data), "
+            "'research' (CC BY-NC-SA 4.0, provides performance nearly identical to the reference variant), or "
+            "'open' (CC BY-SA 4.0, smaller training set). "
+            "For more info about the three model variants, please refer to the README and paper manuscript."
+        ),
+    )
+
     parser.add_argument("-np", "--nr_thr_preprocess", type=int,
                         help="Nr of threads for preprocessing", default=4)
 
@@ -82,6 +94,17 @@ def main():
         raise ValueError(
             "CADS only works with a NVidia CUDA GPU. CUDA not found.")
 
+    setup_nnunet_env(args.license)
+    from cads.utils.inference import predict
+    from cads.utils.libs import (
+        DEFAULT_LICENSE,
+        MODEL_LICENSES,
+        check_or_download_model_weights,
+        get_model_weights_dir,
+    )
+    print(f"Segmentation using {MODEL_LICENSES[args.license]['release']} ({MODEL_LICENSES[args.license]['license']} licensed) variant ...")
+
+
     folds = 'all'
 
     if args.split is not None:
@@ -93,13 +116,13 @@ def main():
 
     # parepare local model weights
     task_ids = args.task_id
-    model_folder = get_model_weights_dir()
+    model_folder = get_model_weights_dir(args.license)
     for task_id in task_ids:
-        check_or_download_model_weights(task_id)
+        check_or_download_model_weights(task_id, args.license)
     if any(task in task_ids for task in [557, 558]) and 553 not in task_ids:
-        check_or_download_model_weights(553)
+        check_or_download_model_weights(553, args.license)
         if 558 in task_ids and 552 not in task_ids:
-            check_or_download_model_weights(552)
+            check_or_download_model_weights(552, args.license)
 
     predict(test_images, args.output_folder, model_folder, args.task_id, folds=folds, use_cpu=False,
             preprocess_cads=args.preprocessing, postprocess_cads = args.postprocessing, 

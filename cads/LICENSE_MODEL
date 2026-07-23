@@ -1,7 +1,68 @@
-Model License
+CADS Model Weight Licenses
 
-The model weights released in the Releases section of this repository are licensed under the Creative Commons Attribution 4.0 International License (CC BY 4.0).
+CADS releases three pretrained model-weight variants. All variants use the same CADS network architecture, nine-task grouping (T551-T559), and 167 anatomical target structures. They differ in the training data sources included and therefore in the license terms that apply to the released weights.
 
-License Text
-This work is licensed under a Creative Commons Attribution 4.0 International License:
-https://creativecommons.org/licenses/by/4.0/
+This file describes the model weights only. The source code license is provided separately in the repository LICENSE file.
+
+Variant summary
+
+- CADS-model, CLI name: reference
+  License: CADS customized model license.
+  Intended use: reproduction of the reference CADS model and manuscript results, or use cases that specifically require the model trained on the full CADS-dataset collection.
+
+- CADS-model-research, CLI name: research
+  License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0).
+  Intended use: most academic and non-commercial research use. This is the recommended variant for most users because it performs nearly identically to the reference model in the reported evaluation while avoiding additional challenge-dataset agreement requirements.
+
+- CADS-model-open, CLI name: open
+  License: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0).
+  Intended use: users who need a model-weight license that permits redistribution of derived weights, including commercial use, under share-alike terms. This variant was trained on a smaller license-compatible corpus, and performance may be degraded for some detailed head-and-neck organ-at-risk structures due to the lack of some training data.
+
+Detailed variant descriptions
+
+1. CADS-model: reference model
+
+This release contains the pretrained weights for the reference CADS-model reported in the main manuscript.
+
+The model suite consists of nine segmentation tasks (T551-T559) and covers the complete CADS target space of 167 anatomical structures. It was trained using the full collection of data sources included in the CADS-dataset. After data filtering, the maximum training set size across the tasks is 21,277 CT images.
+
+These model weights are distributed under the CADS customized model license.
+
+Compared with CADS-model-research, which is released under CC BY-NC-SA 4.0, the reference model was additionally trained using data from EXACT09, LOLA11, SLIVER07, and EMPIRE10. These challenge datasets are governed by their own customized terms.
+
+Users should review and follow the applicable terms for EXACT09, LOLA11, SLIVER07, and EMPIRE10 when using the reference model weights. Downloading the CADS reference model weights does not replace the terms of those challenges.
+
+This reference release is primarily intended for reproducing the model and results reported in the main manuscript, or for users who specifically require the model trained on the complete set of CADS data sources.
+
+2. CADS-model-research
+
+This release contains the pretrained weights for CADS-model-research, the licensing-stratified CADS-model variant released under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0).
+
+CADS-model-research uses the same network architecture, task grouping, and 167-structure target list as the reference CADS-model. It was trained using all CADS data sources compatible with redistribution of derived model weights under CC BY-NC-SA 4.0.
+
+For Han-Seg and LNDb, written permission was obtained from the original authors to release model weights derived from these datasets under CC BY-NC-SA 4.0.
+
+After data filtering, the maximum training set size across the nine tasks is 21,124 CT images.
+
+Compared with the customized-license reference CADS-model, CADS-model-research excludes EXACT09, LOLA11, SLIVER07, and EMPIRE10. Our comparative evaluation showed that its performance is nearly identical to that of the reference model across the reported test subsets.
+
+For most users, we recommend CADS-model-research because it provides performance comparable to the reference model under a more broadly applicable license and does not require separate acceptance of the agreements for EXACT09, LOLA11, SLIVER07, and EMPIRE10.
+
+3. CADS-model-open
+
+This release contains the pretrained weights for CADS-model-open, the licensing-stratified CADS-model variant released under Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0).
+
+CADS-model-open uses the same network architecture, task grouping, and 167-structure target list as the reference CADS-model. It was trained using CADS data sources that permit redistribution of derived model weights, including commercial use, under share-alike terms.
+
+For VerSe, written permission was obtained from the original authors to release model weights derived from the dataset under CC BY-SA 4.0.
+
+After data filtering, the maximum training set size across the nine tasks is 13,269 CT images.
+
+To enable release under this more permissive license, CADS-model-open was trained on a smaller corpus than CADS-model-research and the customized-license reference CADS-model. Performance may therefore be degraded for some detailed head-and-neck organ-at-risk structures due to the lack of some training data in the CC BY-SA-compatible training subset.
+
+Users who require the strongest available performance for detailed head-and-neck structures should consider CADS-model-research or the customized-license reference CADS-model, subject to their respective license requirements.
+
+License text links
+
+- CC BY-NC-SA 4.0: https://creativecommons.org/licenses/by-nc-sa/4.0/
+- CC BY-SA 4.0: https://creativecommons.org/licenses/by-sa/4.0/

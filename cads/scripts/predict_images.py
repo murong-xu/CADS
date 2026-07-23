@@ -1,10 +1,9 @@
 import argparse
 import os
+import warnings
+warnings.filterwarnings("ignore", message=".*weights_only=False.*", category=FutureWarning)
 
 from cads.utils.libs import setup_nnunet_env
-setup_nnunet_env()
-from cads.utils.inference import predict
-from cads.utils.libs import get_model_weights_dir, check_or_download_model_weights
 
 def check_input_task(value):
     valid_numbers = {551, 552, 553, 554, 555, 556, 557, 558, 559}
@@ -35,7 +34,20 @@ def main():
 
     parser.add_argument("-task", dest='task_id', type=check_input_task,
                         help="Input either 'all' or one of the task ids[551, 552, 553, 554, 555, 556, 557, 558, 559]")
-                        
+
+    parser.add_argument(
+        "-license",
+        choices=["reference", "research", "open"],
+        default="reference",
+        help=(
+            "Model variant to use. Available options: "
+            "'reference' (Default; paper reference model,  license, trained on full data), "
+            "'research' (CC BY-NC-SA 4.0, provides performance nearly identical to the reference variant), or "
+            "'open' (CC BY-SA 4.0, smaller training set). "
+            "For more info about the three model variants, please refer to the README and paper manuscript."
+        ),
+    )
+
     parser.add_argument(
         '--cpu',
         action='store_true',
@@ -62,6 +74,16 @@ def main():
 
     args = parser.parse_args()
 
+    setup_nnunet_env(args.license)
+    from cads.utils.inference import predict
+    from cads.utils.libs import (
+        DEFAULT_LICENSE,
+        MODEL_LICENSES,
+        check_or_download_model_weights,
+        get_model_weights_dir,
+    )
+    print(f"Segmentation using {MODEL_LICENSES[args.license]['release']} ({MODEL_LICENSES[args.license]['license']} licensed) variant ...")
+
     folds = 'all'
     
     if str(args.input_folder).endswith("nii.gz"):
@@ -78,13 +100,13 @@ def main():
     task_ids = args.task_id
 
     # parepare local model weights
-    model_folder = get_model_weights_dir()
+    model_folder = get_model_weights_dir(args.license)
     for task_id in task_ids:
-        check_or_download_model_weights(task_id)
+        check_or_download_model_weights(task_id, args.license)
     if any(task in task_ids for task in [557, 558]) and 553 not in task_ids:
-        check_or_download_model_weights(553)
+        check_or_download_model_weights(553, args.license)
         if 558 in task_ids and 552 not in task_ids:
-            check_or_download_model_weights(552)
+            check_or_download_model_weights(552, args.license)
 
     task_ids.sort()
     predict(input_images, output_seg_folder, model_folder, task_ids, folds=folds, use_cpu=args.cpu,
