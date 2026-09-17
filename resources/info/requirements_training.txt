@@ -1,0 +1,23 @@
+# Pinned package versions used to train the CADS-model.
+# Environment: Python 3.9.21, CUDA 12.4.
+# Install:     pip install -r requirements_training.txt
+
+--extra-index-url https://download.pytorch.org/whl/cu124
+
+# Deep learning framework
+torch==2.5.1
+nnunetv2==2.5.1
+dynamic-network-architectures==0.3.1
+batchgenerators==0.25.1
+batchgeneratorsv2==0.2.3
+acvl-utils==0.2
+
+# Numerics and image I/O
+numpy==1.26.3
+scipy==1.13.1
+scikit-image==0.22.0
+SimpleITK==2.5.0
+nibabel==5.3.2
+
+# Post-processing
+TPTBox==0.3.0
