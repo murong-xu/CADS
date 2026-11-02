@@ -3,6 +3,7 @@
 # CADS : A Comprehensive Anatomical Dataset and Segmentation for Whole-Body Anatomy in Computed Tomography
 
 ## News
+- [October 2026] 🎉 CADS is now published in **Nature Communications**! A happy chapter in the CADS story, with more to come! 🌱
 - [July 2026] New model variants are now available! We've introduced licensing-stratified options and the anatomy-driven CADS-region model suite to provide more flexibility for different use cases. For more details, please see the [Model Variants](#model-variants) section.
 - [July 2025] Updated model weights and paper preprint, please refer to the [Useful Links](#useful-links) section below!
 - [March 2025] Model weights and paper preprint coming soon!
@@ -181,10 +182,12 @@ Additional resources released with the CADS manuscript are available here:
 If you use any component of CADS (CADS-dataset, its curated segmentation masks, pretrained CADS-model, or the 3D Slicer extension), please cite:
 
 ```bibtex
-@article{xu2025cads,
-  title={CADS: A Comprehensive Anatomical Dataset and Segmentation for Whole-Body Anatomy in Computed Tomography},
-  author={Xu, Murong and Amiranashvili, Tamaz and Navarro, Fernando and Fritsak, Maksym and Hamamci, Ibrahim Ethem and Shit, Suprosanna and Wittmann, Bastian and Er, Sezgin and Christ, Sebastian M. and de la Rosa, Ezequiel and Deseoe, Julian and Graf, Robert and Möller, Hendrik and Sekuboyina, Anjany and Peeken, Jan C. and Becker, Sven and Baldini, Giulia and Haubold, Johannes and Nensa, Felix and Hosch, René and Mirajkar, Nikhil and Khalid, Saad and Zachow, Stefan and Weber, Marc-André and Langs, Georg and Wasserthal, Jakob and Ozdemir, Mehmet Kemal and Fedorov, Andrey and Kikinis, Ron and Tanadini-Lang, Stephanie and Kirschke, Jan S. and Combs, Stephanie E. and Menze, Bjoern},
-  journal={arXiv preprint arXiv:2507.22953},
-  year={2025}
+@article{xu2026cads,
+  title={CADS: a comprehensive anatomical dataset and segmentation for whole-body anatomy in computed tomography},
+  author={Xu, Murong and Navarro, Fernando and Fritsak, Maksym and Hamamci, Ibrahim Ethem and Shit, Suprosanna and Wittmann, Bastian and Er, Sezgin and Christ, Sebastian M. and de la Rosa, Ezequiel and Deseoe, Julian and Graf, Robert and Möller, Hendrik and Sekuboyina, Anjany and Peeken, Jan C. and Becker, Sven S. and Baldini, Giulia and Haubold, Johannes and Nensa, Felix and Hosch, René and Mirajkar, Nikhil and Khalid, Saad and Zachow, Stefan and Weber, Marc-André and Langs, Georg and Wasserthal, Jakob and Ozdemir, Mehmet Kemal and Fedorov, Andrey and Kikinis, Ron and Tanadini-Lang, Stephanie and Kirschke, Jan S. and Combs, Stephanie E. and Amiranashvili, Tamaz and Menze, Bjoern},
+  journal={Nature Communications},
+  year={2026},
+  doi={10.1038/s41467-026-78732-1},
+  url={https://doi.org/10.1038/s41467-026-78732-1}
 }
 ```
