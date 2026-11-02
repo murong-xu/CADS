@@ -41,7 +41,7 @@ The framework consists of two main components:
    - Also available as a user-friendly 3D Slicer plugin with UI interface, simple installation and one-click inference.
 
 ## Useful Links
-- [📄 CADS Paper Preprint](https://arxiv.org/abs/2507.22953)
+- [📄 CADS Paper](https://doi.org/10.1038/s41467-026-78732-1)
 - [🤗 CADS-dataset](https://huggingface.co/datasets/mrmrx/CADS-dataset)
 - [📦 CADS-model Weights](https://github.com/murong-xu/CADS/releases)
 - [🔧 CADS-model Codebase](https://github.com/murong-xu/CADS)
