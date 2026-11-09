@@ -68,9 +68,9 @@
 | 1     | Esophagus                  |
 | 2     | Trachea                    |
 | 3     | Myocardium                 |
-| 4     | Atrium L                   |
+| 4     | Heart atrium L            |
 | 5     | Heart ventricle L          |
-| 6     | Atrium R                   |
+| 6     | Heart atrium R            |
 | 7     | Heart ventricle R          |
 | 8     | Pulmonary artery           |
 | 9     | Brain                      |
@@ -107,8 +107,8 @@
 | 13    | Gluteus maximus muscle R         |
 | 14    | Gluteus medius muscle L          |
 | 15    | Gluteus medius muscle R          |
-| 16    | Gluteus minius muscle L          |
-| 17    | Gluteus minius muscle R          |
+| 16    | Gluteus minimus muscle L         |
+| 17    | Gluteus minimus muscle R         |
 | 18    | Deep muscle of back L            |
 | 19    | Deep muscle of back R            |
 | 20    | Iliopsoas muscle L               |
@@ -183,11 +183,11 @@
 | 2     | Gray matter               |
 | 3     | Cerebrospinal fluid       |
 | 4     | Scalp                     |
-| 5     | Eyeball                   |
+| 5     | Eyeballs                  |
 | 6     | Compact bone              |
 | 7     | Spongy bone               |
-| 8     | Blood                     |
-| 9     | Muscle of head            |
+| 8     | Vascular structure of head |
+| 9     | Rectus eye muscle structure |
 
 </details>
 
@@ -201,11 +201,11 @@
 | 2     | Carotid artery R                 |
 | 3     | Arytenoid cartilage              |
 | 4     | Mandible                         |
-| 5     | Brainstem                        |
+| 5     | Brain stem                      |
 | 6     | Buccal mucosa                    |
 | 7     | Oral cavity                      |
-| 8     | Cochlear L                       |
-| 9     | Cochlear R                       |
+| 8     | Cochlea L                       |
+| 9     | Cochlea R                       |
 | 10    | Cricopharyngeus                  |
 | 11    | Cervical esophagus               |
 | 12    | Anterior eyeball segment L       |
@@ -219,7 +219,7 @@
 | 20    | Thyroid                          |
 | 21    | Glottis                          |
 | 22    | Supraglottis                     |
-| 23    | Both lips                        |
+| 23    | Lip                             |
 | 24    | Optic chiasm                     |
 | 25    | Optic nerve L                    |
 | 26    | Optic nerve R                    |
@@ -237,12 +237,12 @@
 | 0     | Background                  |
 | 1     | Subcutaneous tissue         |
 | 2     | Muscle                       |
-| 3     | Abdominal cavity             |
+| 3     | Abdominopelvic cavity        |
 | 4     | Thoracic cavity              |
-| 5     | Bones                        |
+| 5     | Bone structure               |
 | 6     | Gland structure              |
 | 7     | Pericardium                   |
-| 8     | Prosthetic breast implant    |
+| 8     | Breast implant               |
 | 9     | Mediastinum                   |
 | 10    | Spinal cord                  |
 
